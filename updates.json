@@ -1,0 +1,19 @@
+{
+  "addons": {
+    "readingflow@moon.com": {
+      "updates": [
+        {
+          "version": "1.1.0",
+          "update_link": "https://github.com/Moon-python/zotero-reading-flow/releases/download/v1.1.0/zotero-reading-flow.xpi",
+          "update_hash": "sha256:944108e3cb861643fa2831c74383b2baec4be405f62f2809c7e65b13890547b0",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "9.0",
+              "strict_max_version": "9.0.*"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
