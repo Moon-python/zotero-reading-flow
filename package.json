@@ -1,0 +1,17 @@
+{
+  "name": "zotero-reading-flow",
+  "version": "1.0.0",
+  "description": "Zotero 9 Reading Progress and Visual Organization",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "zotero-plugin-toolkit": "^5.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "zotero-types": "^0.1.5",
+    "typescript": "^5.0.0"
+  }
+}
