@@ -2,6 +2,7 @@ import { BasicTool } from 'zotero-plugin-toolkit';
 import { DataStore } from './dataStore';
 import { ReaderTracker } from './readerTracker';
 import { ColumnManager } from './columnManager';
+import { StyleManager } from './styleManager';
 import { Logger } from './Logger';
 
 class Bootstrap {
@@ -9,9 +10,11 @@ class Bootstrap {
   public dataStore?: DataStore;
   private readerTracker?: ReaderTracker;
   private columnManager?: ColumnManager;
+  private styleManager: StyleManager;
 
   constructor() {
     this.tool = new BasicTool();
+    this.styleManager = new StyleManager();
   }
 
   install() {}
@@ -20,6 +23,8 @@ class Bootstrap {
     Logger.log('Reading Flow: Starting up');
     this.dataStore = new DataStore();
     
+    this.styleManager.injectCSS();
+
     this.readerTracker = new ReaderTracker(this.dataStore);
     this.readerTracker.register();
 
@@ -37,6 +42,8 @@ class Bootstrap {
     if (this.columnManager) {
       this.columnManager.unregister();
     }
+
+    this.styleManager.unregister();
   }
   
   uninstall() {}

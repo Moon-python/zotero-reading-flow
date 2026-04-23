@@ -30,10 +30,40 @@ export class ColumnManager {
 
     const flowData = this.dataStore.getData(item);
     
+    // UI Layer - Row Tinting
+    const row = element.closest('tree-row');
+    if (row) {
+      if (flowData.c) {
+        row.setAttribute('data-flow-color', 'true');
+        // Apply 20% opacity (0x33) to hex colors
+        const color = flowData.c.startsWith('#') ? `${flowData.c}33` : flowData.c;
+        row.style.setProperty('--reading-flow-row-color', color);
+      } else {
+        row.removeAttribute('data-flow-color');
+        row.style.removeProperty('--reading-flow-row-color');
+      }
+    }
+    
     // Find most recent progress from all attachments
     let latestProgress = 0;
     if (flowData.p && Object.keys(flowData.p).length > 0) {
-       latestProgress = Math.max(...Object.values(flowData.p) as number[]);
+      const entries = Object.values(flowData.p);
+      let newestTs = -1;
+      
+      for (const entry of entries) {
+        if (typeof entry === 'object' && entry !== null && 'ts' in entry) {
+          if (entry.ts > newestTs) {
+            newestTs = entry.ts;
+            latestProgress = entry.pr;
+          }
+        } else if (typeof entry === 'number') {
+          // Fallback for legacy data: if no timestamped entry found yet, 
+          // or if this number is greater than what we have (as a heuristic)
+          if (newestTs === -1) {
+            latestProgress = Math.max(latestProgress, entry);
+          }
+        }
+      }
     }
 
     if (latestProgress === 0) return element;
