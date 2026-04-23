@@ -3,6 +3,7 @@ import { DataStore } from './dataStore';
 import { ReaderTracker } from './readerTracker';
 import { ColumnManager } from './columnManager';
 import { StyleManager } from './styleManager';
+import { NotifierManager } from './notifierManager';
 import { Logger } from './Logger';
 
 class Bootstrap {
@@ -11,6 +12,7 @@ class Bootstrap {
   private readerTracker?: ReaderTracker;
   private columnManager?: ColumnManager;
   private styleManager: StyleManager;
+  private notifierManager?: NotifierManager;
 
   constructor() {
     this.tool = new BasicTool();
@@ -30,6 +32,9 @@ class Bootstrap {
 
     this.columnManager = new ColumnManager(this.dataStore);
     await this.columnManager.register();
+
+    this.notifierManager = new NotifierManager(this.dataStore);
+    this.notifierManager.register();
   }
 
   shutdown() {
@@ -41,6 +46,10 @@ class Bootstrap {
 
     if (this.columnManager) {
       this.columnManager.unregister();
+    }
+
+    if (this.notifierManager) {
+      this.notifierManager.unregister();
     }
 
     this.styleManager.unregister();
