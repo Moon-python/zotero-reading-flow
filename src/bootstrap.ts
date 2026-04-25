@@ -18,6 +18,7 @@ class Bootstrap {
   private popoverRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private preferencePaneID: string | null = null;
   private started = false;
+  private rootURI: string | null = null;
 
   constructor() {
     this.styleManager = new StyleManager();
@@ -27,6 +28,7 @@ class Bootstrap {
 
   async startup({ id, version, rootURI }: { id: string; version: string; rootURI: string }) {
     await Zotero.initializationPromise;
+    this.rootURI = rootURI;
     this.started = true;
     Logger.log('startup begin');
 
@@ -42,6 +44,7 @@ class Bootstrap {
     try {
       const win = Zotero.getMainWindow();
       this.styleManager.injectCSS(win.document);
+      this.styleManager.injectLocale(win, rootURI);
       Logger.log('CSS OK');
     } catch (e) { Logger.error('CSS FAIL', e); }
 
@@ -79,6 +82,7 @@ class Bootstrap {
 
   shutdown(reason?: number) {
     this.started = false;
+    this.rootURI = null;
     this.dataStore?.close();
     this.clearPopoverRetry();
     this.readerTracker?.unregister();
@@ -98,6 +102,9 @@ class Bootstrap {
     if (!this.started) return;
     try {
       this.styleManager.injectCSS(window.document);
+      if (this.rootURI) {
+        this.styleManager.injectLocale(window, this.rootURI);
+      }
       void this.columnManager?.ensureColumnsVisibleOnFirstRun();
       this.registerPopoverWhenReady();
     } catch (e) {

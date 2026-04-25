@@ -52,6 +52,7 @@ const PROGRESS_CELL_STYLE = [
 export class ColumnManager {
   private dataStore: DataStore;
   private registeredDataKeys: string[] = [];
+  private readonly dataKeys = [PROGRESS_KEY, STATUS_KEY, LAST_READ_KEY];
   private static readonly ITEMS_VIEW_RETRY_COUNT = 120;
   private static readonly ITEMS_VIEW_RETRY_MS = 250;
 
@@ -208,37 +209,32 @@ export class ColumnManager {
     if (!progressKey) Logger.warn('registerColumn returned null for Progress — column will not appear');
     if (!statusKey) Logger.warn('registerColumn returned null for Status — column will not appear');
     if (!lastReadKey) Logger.warn('registerColumn returned null for Last Read — column will not appear');
+
     this.registeredDataKeys = [progressKey, statusKey, lastReadKey].filter(Boolean);
     void this.ensureColumnsVisibleOnFirstRun();
   }
 
   public async ensureColumnsVisibleOnFirstRun() {
-    await this.showColumnsOnFirstRun(this.registeredDataKeys);
+    await this.showColumnsOnFirstRun(this.dataKeys);
   }
 
   private async showColumnsOnFirstRun(registeredKeys: string[]) {
     const INIT_PREF = 'extensions.readingflow.columnsInitialized';
+    const INIT_PREF_LEGACY = 'extensions.zotero.extensions.readingflow.columnsInitialized';
     try {
-      if (Zotero.Prefs.get(INIT_PREF)) return;
+      if (Zotero.Prefs.get(INIT_PREF) || Zotero.Prefs.get(INIT_PREF_LEGACY)) {
+        return;
+      }
       if (!registeredKeys.length) return;
 
-      // itemsView is set asynchronously after ItemTree.init(); wait for UI to be ready.
-      await (Zotero as any).uiReadyPromise;
+      // itemsView is set asynchronously after ItemTree.init(); wait for it directly.
       const itemsView = await this.waitForItemsView();
       if (!itemsView) {
         Logger.warn('showColumnsOnFirstRun: itemsView not available');
         return;
       }
 
-      // 1. Update in-memory _columnPrefs with hidden:false.
-      if (!itemsView._columnPrefs) itemsView._columnPrefs = {};
-      for (const key of registeredKeys) {
-        itemsView._columnPrefs[key] = Object.assign(
-          {},
-          itemsView._columnPrefs[key] || {},
-          { hidden: false }
-        );
-      }
+      await this.applyColumnVisibility(itemsView, registeredKeys);
 
       // 2. Rebuild the Columns object so the current session shows the columns.
       //    _resetColumns creates a new Columns instance that reads _columnPrefs,
@@ -246,6 +242,7 @@ export class ColumnManager {
       if (typeof itemsView._resetColumns === 'function') {
         await itemsView._resetColumns();
       }
+      await this.applyColumnVisibility(itemsView, registeredKeys);
 
       // 3. Force-write to treePrefs.json immediately (bypass 60s throttle)
       //    so the state is persisted even if the user quits quickly.
@@ -263,12 +260,17 @@ export class ColumnManager {
   private async waitForItemsView() {
     for (let attempt = 0; attempt < ColumnManager.ITEMS_VIEW_RETRY_COUNT; attempt++) {
       const pane = (Zotero as any).getActiveZoteroPane?.();
-      if (pane?.itemsView) {
+      const itemsView = pane?.itemsView;
+      if (itemsView && this.isMainItemsViewReady(itemsView)) {
         return pane.itemsView;
       }
       await this.delay(ColumnManager.ITEMS_VIEW_RETRY_MS);
     }
     return null;
+  }
+
+  private isMainItemsViewReady(itemsView: any) {
+    return typeof itemsView.id === 'string' && itemsView.id.startsWith('item-tree-main-');
   }
 
   private async delay(ms: number) {
@@ -281,6 +283,47 @@ export class ColumnManager {
       }
       schedule(resolve, ms);
     });
+  }
+
+  private getTreeColumnKeys(dataKey: string): string[] {
+    const keys = new Set<string>();
+    keys.add(dataKey);
+
+    if (!dataKey.includes('-')) {
+      keys.add(`${PLUGIN_ID}-${dataKey}`);
+    } else if (!dataKey.startsWith(`${PLUGIN_ID}-`)) {
+      keys.add(`${PLUGIN_ID}-${dataKey}`);
+    }
+
+    for (const key of Array.from(keys)) {
+      try {
+        if (typeof CSS !== "undefined" && CSS.escape) {
+          const escaped = CSS.escape(key);
+          if (escaped) {
+            keys.add(escaped);
+          }
+        }
+      } catch {
+        // ignore escape failures and keep plain key fallback
+      }
+    }
+
+    return Array.from(keys);
+  }
+
+  private async applyColumnVisibility(itemsView: any, registeredKeys: string[]) {
+    if (!itemsView._columnPrefs) itemsView._columnPrefs = {};
+    for (const dataKey of registeredKeys) {
+      const keys = this.getTreeColumnKeys(dataKey);
+      if (!keys.length) continue;
+      for (const columnKey of keys) {
+        itemsView._columnPrefs[columnKey] = Object.assign(
+          {},
+          itemsView._columnPrefs[columnKey] || {},
+          { hidden: false }
+        );
+      }
+    }
   }
 
   public unregister() {

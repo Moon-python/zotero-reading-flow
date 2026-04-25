@@ -19,4 +19,16 @@ export class StyleManager {
   public unregister() {
     this.doc?.getElementById(STYLE_ID)?.remove();
   }
+
+  public injectLocale(win: Window, rootURI: string) {
+    if (!rootURI) return;
+    const mozXULElement = (win as any).MozXULElement;
+    const insertFTLIfNeeded = mozXULElement?.insertFTLIfNeeded;
+
+    if (typeof insertFTLIfNeeded !== 'function') {
+      return;
+    }
+
+    insertFTLIfNeeded.call(mozXULElement, `${rootURI}locale/en-US/reading-flow.ftl`);
+  }
 }

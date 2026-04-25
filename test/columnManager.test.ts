@@ -7,8 +7,12 @@ test('showColumnsOnFirstRun retries until itemsView exists and persists visible 
   let resetCalls = 0;
   let writeCalls = 0;
   let paneLookups = 0;
+  (globalThis as any).CSS = {
+    escape: (value: string) => value.replace(/@/g, '\\@').replace(/\./g, '\\.')
+  };
 
   const itemsView = {
+    id: 'item-tree-main-default',
     _columnPrefs: {},
     async _resetColumns() {
       resetCalls++;
@@ -51,7 +55,11 @@ test('showColumnsOnFirstRun retries until itemsView exists and persists visible 
 
   assert.deepEqual(itemsView._columnPrefs, {
     progressKey: { hidden: false },
-    statusKey: { hidden: false }
+    'readingflow@moon.com-progressKey': { hidden: false },
+    'readingflow\\@moon\\.com-progressKey': { hidden: false },
+    statusKey: { hidden: false },
+    'readingflow@moon.com-statusKey': { hidden: false },
+    'readingflow\\@moon\\.com-statusKey': { hidden: false }
   });
   assert.equal(resetCalls, 1);
   assert.equal(writeCalls, 1);
@@ -99,8 +107,12 @@ test('showColumnsOnFirstRun can succeed on a later retry after an earlier miss',
   let paneMode: 'missing' | 'ready' = 'missing';
   let resetCalls = 0;
   let writeCalls = 0;
+  (globalThis as any).CSS = {
+    escape: (value: string) => value.replace(/@/g, '\\@').replace(/\./g, '\\.')
+  };
 
   const itemsView = {
+    id: 'item-tree-main-default',
     _columnPrefs: {},
     async _resetColumns() {
       resetCalls++;
@@ -142,7 +154,9 @@ test('showColumnsOnFirstRun can succeed on a later retry after an earlier miss',
   await (manager as any).showColumnsOnFirstRun(['progressKey']);
 
   assert.deepEqual(itemsView._columnPrefs, {
-    progressKey: { hidden: false }
+    progressKey: { hidden: false },
+    'readingflow@moon.com-progressKey': { hidden: false },
+    'readingflow\\@moon\\.com-progressKey': { hidden: false }
   });
   assert.equal(resetCalls, 1);
   assert.equal(writeCalls, 1);

@@ -28,14 +28,15 @@ export class ReadingFlowMenuManager {
           menuType: 'submenu',
           l10nID: 'reading-flow-menu',
           onShowing: async (_event: Event, context: any) => {
-            context.setEnabled(await this.canShowSubmenu());
+            context?.setEnabled?.(await this.canShowSubmenu(context));
+            context?.setVisible?.(true);
           },
           menus: [
             {
               menuType: 'menuitem',
               l10nID: 'reading-flow-resume-reading',
               onShowing: async (_event: Event, context: any) => {
-                const selected = this.getSelectedItems();
+                const selected = this.getSelectedItems(context);
                 const canResume = selected.length === 1 && await this.resumeReader.canResume(selected[0]);
                 context.setEnabled(canResume);
               },
@@ -86,7 +87,7 @@ export class ReadingFlowMenuManager {
       menuType: 'menuitem',
       l10nID,
       onShowing: (_event: Event, context: any) => {
-        context.setChecked?.(this.selectedRegularItemsMatchQueue(queue));
+        context.setChecked?.(this.selectedRegularItemsMatchQueue(queue, context));
       },
       onCommand: () => this.logQueueSelection(queue)
     };
@@ -104,8 +105,8 @@ export class ReadingFlowMenuManager {
     }
   }
 
-  private selectedRegularItemsMatchQueue(queue: QueueKey): boolean {
-    const items = this.getSelectedRegularItems();
+  private selectedRegularItemsMatchQueue(queue: QueueKey, context?: any): boolean {
+    const items = this.getSelectedRegularItems(context);
     if (!items.length) return false;
 
     const states = items.map((item) => this.getQueueStateForItem(item));
@@ -121,19 +122,50 @@ export class ReadingFlowMenuManager {
   }
 
   private getQueueStateForItem(item: any): ReadingQueueState | null {
+    const targetItem = this.normalizeItem(item);
+    if (!targetItem) return null;
+
     try {
-      return getReadingQueueState(this.dataStore.getData(item));
+      return getReadingQueueState(this.dataStore.getData(targetItem));
     } catch (e) {
-      Logger.warn(`failed to read queue state for item ${item?.id}: ${e instanceof Error ? e.message : e}`);
+      Logger.warn(`failed to read queue state for item ${targetItem?.id}: ${e instanceof Error ? e.message : e}`);
       return null;
     }
   }
 
-  private async canShowSubmenu(): Promise<boolean> {
-    if (this.getSelectedRegularItems().length > 0) return true;
+  private async canShowSubmenu(context?: any): Promise<boolean> {
+    if (this.getSelectedRegularItems(context).length > 0) return true;
 
-    const selected = this.getSelectedItems();
+    const selected = this.getSelectedItems(context);
     return selected.length === 1 && await this.resumeReader.canResume(selected[0]);
+  }
+
+  private getSelectedItems(context?: any): any[] {
+    const contextItems = Array.isArray(context?.items) ? context.items : [];
+    const normalizedContextItems = contextItems
+      .map((item: any) => this.normalizeItem(item))
+      .filter((item: any) => item);
+
+    if (normalizedContextItems.length) {
+      return normalizedContextItems;
+    }
+
+    const pane = Zotero.getActiveZoteroPane?.();
+    return pane?.getSelectedItems?.() ?? pane?.itemsView?.getSelectedItems?.() ?? [];
+  }
+
+  private getSelectedRegularItems(context?: any): any[] {
+    return this.getSelectedItems(context).filter((item: any) => this.normalizeItem(item)?.isRegularItem?.());
+  }
+
+  private normalizeItem(item: any): any {
+    if (!item) return null;
+
+    if (typeof item.id === 'number') {
+      return Zotero.Items.get(item.id) ?? item;
+    }
+
+    return item;
   }
 
   private async updateSelectedItems(update: (item: any) => Promise<void>) {
@@ -149,14 +181,5 @@ export class ReadingFlowMenuManager {
     }
     Zotero.ItemTreeManager.refreshColumns?.();
     Zotero.Notifier.trigger('refresh', 'item', items.map((item: any) => item.id));
-  }
-
-  private getSelectedItems(): any[] {
-    const pane = Zotero.getActiveZoteroPane?.();
-    return pane?.getSelectedItems?.() ?? pane?.itemsView?.getSelectedItems?.() ?? [];
-  }
-
-  private getSelectedRegularItems(): any[] {
-    return this.getSelectedItems().filter((item: any) => item?.isRegularItem?.());
   }
 }
