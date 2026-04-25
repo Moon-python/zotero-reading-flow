@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ResumeReader } from '../src/resumeReader';
 import { DEFAULT_FLOW_DATA, FlowData } from '../src/flowData';
+import { Logger } from '../src/Logger';
 
 function flowData(updates: Partial<FlowData> = {}): FlowData {
   return { ...DEFAULT_FLOW_DATA, ...updates };
@@ -110,6 +111,40 @@ test('resume falls back to best PDF attachment when parent lastAttachmentId is i
   assert.deepEqual(calls, [[11, { pageIndex: 2 }]]);
 });
 
+test('resume falls back to best PDF attachment when tracked attachment is not a PDF', async () => {
+  const calls: any[] = [];
+  const attachment = pdfAttachment(11);
+  const parent = regularItem(20, attachment);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return {
+          id: 10,
+          isPDFAttachment() {
+            return false;
+          }
+        };
+      }
+    },
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 5 });
+    }
+  } as any);
+
+  assert.equal(await reader.resume(parent), true);
+  assert.deepEqual(calls, [[11, { pageIndex: 4 }]]);
+});
+
 test('resume uses PDF attachment directly and reads parent lastPage when parentID exists', async () => {
   const calls: any[] = [];
   const attachment = pdfAttachment(10, 20);
@@ -158,6 +193,42 @@ test('resume opens without location when no positive lastPage is available', asy
 
   assert.equal(await reader.resume(attachment), true);
   assert.deepEqual(calls, [[10, undefined]]);
+});
+
+test('resume returns false and logs when opening without location fails', async () => {
+  const calls: any[] = [];
+  const errors: any[] = [];
+  const originalError = Logger.error;
+  const attachment = pdfAttachment(10);
+  Logger.error = (...args: any[]) => {
+    errors.push(args);
+  };
+  (globalThis as any).Zotero = {
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+        if (args[1] === undefined) {
+          throw new Error('open failed');
+        }
+      }
+    }
+  };
+
+  try {
+    const reader = new ResumeReader({
+      getData() {
+        return flowData();
+      }
+    } as any);
+
+    assert.equal(await reader.resume(attachment), false);
+    assert.deepEqual(calls, [[10, undefined]]);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0][0], /failed to open attachment 10/);
+    assert.equal(errors[0][1]?.message, 'open failed');
+  } finally {
+    Logger.error = originalError;
+  }
 });
 
 test('resume retries without location when opening at page location throws', async () => {
