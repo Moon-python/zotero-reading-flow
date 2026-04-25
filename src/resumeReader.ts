@@ -21,16 +21,25 @@ export class ResumeReader {
   constructor(private readonly dataStore: DataStore) {}
 
   public async canResume(item: ZoteroItem): Promise<boolean> {
-    const target = await this.resolveTarget(item);
+    const target = await this.resolveTargetSafely(item);
     return Boolean(target);
   }
 
   public async resume(item: ZoteroItem): Promise<boolean> {
-    const target = await this.resolveTarget(item);
+    const target = await this.resolveTargetSafely(item);
     if (!target) return false;
 
     const location = this.getLocation(target.lastPage);
     return this.openAttachment(target.attachment.id, location);
+  }
+
+  private async resolveTargetSafely(item: ZoteroItem): Promise<ResumeTarget | null> {
+    try {
+      return await this.resolveTarget(item);
+    } catch (error) {
+      Logger.warn(`ResumeReader: failed to resolve target: ${this.getErrorMessage(error)}`);
+      return null;
+    }
   }
 
   private async resolveTarget(item: ZoteroItem): Promise<ResumeTarget | null> {
@@ -83,9 +92,9 @@ export class ResumeReader {
 
     try {
       const parent = (globalThis as any).Zotero?.Items?.get?.(parentID);
-      return parent ? this.dataStore.getData(parent).lastPage : null;
+      return parent?.isRegularItem?.() ? this.dataStore.getData(parent).lastPage : null;
     } catch (error) {
-      Logger.warn(`ResumeReader: failed to resolve parent item ${parentID}`);
+      Logger.warn(`ResumeReader: failed to resolve parent item ${parentID}: ${this.getErrorMessage(error)}`);
       return null;
     }
   }
@@ -109,7 +118,7 @@ export class ResumeReader {
       await this.callOpen(attachmentId, undefined);
       return true;
     } catch (error) {
-      Logger.error(`ResumeReader: failed to open attachment ${attachmentId}`, error);
+      Logger.warn(`ResumeReader: failed to open attachment ${attachmentId}: ${this.getErrorMessage(error)}`);
       return false;
     }
   }
@@ -122,14 +131,7 @@ export class ResumeReader {
       return;
     }
 
-    const pane = zotero?.getActiveZoteroPane?.() ?? (globalThis as any).ZoteroPane;
-    const openPDF = pane?.openPDF;
-    if (typeof openPDF === 'function') {
-      await openPDF.call(pane, attachmentId, location);
-      return;
-    }
-
-    throw new Error('No Zotero PDF opener is available');
+    throw new Error('Zotero.Reader.open is not available');
   }
 
   private getLocation(lastPage: number | null): ReaderLocation {
@@ -153,5 +155,9 @@ export class ResumeReader {
 
   private parsePositiveNumber(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 }

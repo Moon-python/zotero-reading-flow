@@ -201,13 +201,13 @@ test('resume opens without location when no positive lastPage is available', asy
   assert.equal(dataReads, 0);
 });
 
-test('resume returns false and logs when opening without location fails', async () => {
+test('resume returns false and logs a warning when opening without location fails', async () => {
   const calls: any[] = [];
-  const errors: any[] = [];
-  const originalError = Logger.error;
+  const warnings: any[] = [];
+  const originalWarn = Logger.warn;
   const attachment = pdfAttachment(10);
-  Logger.error = (...args: any[]) => {
-    errors.push(args);
+  Logger.warn = (...args: any[]) => {
+    warnings.push(args);
   };
   (globalThis as any).Zotero = {
     Reader: {
@@ -229,11 +229,46 @@ test('resume returns false and logs when opening without location fails', async 
 
     assert.equal(await reader.resume(attachment), false);
     assert.deepEqual(calls, [[10, undefined]]);
-    assert.equal(errors.length, 1);
-    assert.match(errors[0][0], /failed to open attachment 10/);
-    assert.equal(errors[0][1]?.message, 'open failed');
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0][0], /failed to open attachment 10/);
+    assert.match(warnings[0][0], /open failed/);
   } finally {
-    Logger.error = originalError;
+    Logger.warn = originalWarn;
+  }
+});
+
+test('resume uses only Zotero.Reader.open and does not fall back to pane openPDF', async () => {
+  const calls: any[] = [];
+  const warnings: any[] = [];
+  const originalWarn = Logger.warn;
+  const attachment = pdfAttachment(10);
+  Logger.warn = (...args: any[]) => {
+    warnings.push(args);
+  };
+  (globalThis as any).Zotero = {
+    Reader: {},
+    getActiveZoteroPane() {
+      return {
+        async openPDF(...args: any[]) {
+          calls.push(args);
+        }
+      };
+    }
+  };
+
+  try {
+    const reader = new ResumeReader({
+      getData() {
+        return flowData();
+      }
+    } as any);
+
+    assert.equal(await reader.resume(attachment), false);
+    assert.deepEqual(calls, []);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0][0], /failed to open attachment 10/);
+  } finally {
+    Logger.warn = originalWarn;
   }
 });
 
@@ -297,6 +332,120 @@ test('resume returns false when no PDF target can be resolved', async () => {
 
   assert.equal(await reader.canResume(parent), false);
   assert.equal(await reader.resume(parent), false);
+});
+
+test('resume returns false and warns when flow data read fails during resolution', async () => {
+  const warnings: any[] = [];
+  const calls: any[] = [];
+  const originalWarn = Logger.warn;
+  const parent = regularItem(20, pdfAttachment(10));
+  Logger.warn = (...args: any[]) => {
+    warnings.push(args);
+  };
+  (globalThis as any).Zotero = {
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  try {
+    const reader = new ResumeReader({
+      getData() {
+        throw new Error('data failed');
+      }
+    } as any);
+
+    assert.equal(await reader.canResume(parent), false);
+    assert.equal(await reader.resume(parent), false);
+    assert.deepEqual(calls, []);
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0][0], /failed to resolve target/);
+    assert.match(warnings[0][0], /data failed/);
+  } finally {
+    Logger.warn = originalWarn;
+  }
+});
+
+test('resume returns false and warns when best attachment lookup fails during resolution', async () => {
+  const warnings: any[] = [];
+  const calls: any[] = [];
+  const originalWarn = Logger.warn;
+  const parent = {
+    id: 20,
+    isPDFAttachment() {
+      return false;
+    },
+    isRegularItem() {
+      return true;
+    },
+    async getBestAttachment() {
+      throw new Error('best attachment failed');
+    }
+  };
+  Logger.warn = (...args: any[]) => {
+    warnings.push(args);
+  };
+  (globalThis as any).Zotero = {
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  try {
+    const reader = new ResumeReader({
+      getData() {
+        return flowData();
+      }
+    } as any);
+
+    assert.equal(await reader.canResume(parent), false);
+    assert.equal(await reader.resume(parent), false);
+    assert.deepEqual(calls, []);
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0][0], /failed to resolve target/);
+    assert.match(warnings[0][0], /best attachment failed/);
+  } finally {
+    Logger.warn = originalWarn;
+  }
+});
+
+test('resume opens direct PDF without location when resolved parent is not a regular item', async () => {
+  const calls: any[] = [];
+  let dataReads = 0;
+  const attachment = pdfAttachment(10, 20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 20);
+        return {
+          id: 20,
+          isRegularItem() {
+            return false;
+          }
+        };
+      }
+    },
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData() {
+      dataReads += 1;
+      return flowData({ lastPage: 9 });
+    }
+  } as any);
+
+  assert.equal(await reader.resume(attachment), true);
+  assert.deepEqual(calls, [[10, undefined]]);
+  assert.equal(dataReads, 0);
 });
 
 test('resume ignores unsupported non-PDF non-regular items without reading data or best attachment', async () => {
