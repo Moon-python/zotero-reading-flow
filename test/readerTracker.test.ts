@@ -53,6 +53,148 @@ test('ReaderTracker prefers live PDF page index over saved attachment page index
   assert.deepEqual(savedCall, [20, '10', 0.4, 2]);
 });
 
+test('ReaderTracker uses attachment numPages field when PDF viewer count is unavailable', () => {
+  const tracker = new ReaderTracker({} as any);
+  let savedCall: any[] | null = null;
+  (tracker as any).debounceSave = (...args: any[]) => {
+    savedCall = args;
+  };
+
+  (globalThis as any).Zotero = {
+    Reader: {
+      _readers: [
+        {
+          itemID: 10,
+          _type: 'pdf',
+          _state: { pageIndex: 1 },
+          _internalReader: {
+            _state: { pageIndex: 1 },
+            _primaryView: {
+              _iframeWindow: {
+                wrappedJSObject: {
+                  PDFViewerApplication: {
+                    // no explicit page count on app object
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return {
+          parentID: 20,
+          isPDFAttachment() {
+            return true;
+          },
+          getField(fieldName: string) {
+            if (fieldName === 'numPages') return '5';
+            return null;
+          }
+        };
+      }
+    }
+  };
+
+  (tracker as any).handlePageChange(10);
+
+  assert.deepEqual(savedCall, [20, '10', 0.4, 2]);
+});
+
+test('ReaderTracker prefers attachment metadata page count over mismatched viewer count', () => {
+  const tracker = new ReaderTracker({} as any);
+  let savedCall: any[] | null = null;
+  (tracker as any).debounceSave = (...args: any[]) => {
+    savedCall = args;
+  };
+
+  (globalThis as any).Zotero = {
+    Reader: {
+      _readers: [
+        {
+          itemID: 10,
+          _type: 'pdf',
+          _state: { pageIndex: 1 },
+          _internalReader: {
+            _state: { pageIndex: 1 },
+            _primaryView: {
+              _iframeWindow: {
+                wrappedJSObject: {
+                  PDFViewerApplication: {
+                    pdfDocument: {
+                      numPages: 400
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return {
+          parentID: 20,
+          isPDFAttachment() {
+            return true;
+          },
+          getField(fieldName: string) {
+            if (fieldName === 'numPages') return '5';
+            return null;
+          }
+        };
+      }
+    }
+  };
+
+  (tracker as any).handlePageChange(10);
+
+  assert.deepEqual(savedCall, [20, '10', 0.4, 2]);
+});
+
+test('ReaderTracker does not emit synthetic page number when page count is unavailable', () => {
+  const tracker = new ReaderTracker({} as any);
+  let savedCall: any[] | null = null;
+  (tracker as any).debounceSave = (...args: any[]) => {
+    savedCall = args;
+  };
+
+  (globalThis as any).Zotero = {
+    Reader: {
+      _readers: [
+        {
+          itemID: 10,
+          _type: 'pdf',
+          _state: { pageIndex: 399 }
+        }
+      ]
+    },
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return {
+          parentID: 20,
+          isPDFAttachment() {
+            return true;
+          },
+          getField() {
+            return null;
+          }
+        };
+      }
+    }
+  };
+
+  (tracker as any).handlePageChange(10);
+
+  assert.equal(savedCall, null);
+});
+
 test('Progress column uses full cell width for the track instead of shrinking it with a fixed label slot', async () => {
   const registeredColumns: any[] = [];
   const fakeDoc = {
@@ -96,12 +238,14 @@ test('Progress column uses full cell width for the track instead of shrinking it
   await manager.register();
   const progressColumn = registeredColumns.find((column) => column.dataKey === 'readingFlowProgress');
   const cell = progressColumn.renderCell(0, '0.5', { className: 'custom-progress', width: 128 }, false, fakeDoc);
-  const track = cell.children[1];
-  const label = cell.children[0];
+  const trackRow = cell.children[0];
+  const track = trackRow?.children?.[0];
+  const label = trackRow?.children?.[1];
 
   assert.equal(cell.className, 'cell custom-progress');
   assert.match(cell.style.cssText, /padding:0/);
   assert.match(cell.style.cssText, /width:100%/);
+  assert.equal(trackRow.style.cssText.includes('display:flex'), true);
   assert.match(track.style.cssText, /width:100%/);
   assert.doesNotMatch(label.style.cssText, /flex:0 0 34px/);
 });

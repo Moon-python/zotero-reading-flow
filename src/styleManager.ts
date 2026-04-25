@@ -1,4 +1,5 @@
 const STYLE_ID = 'reading-flow-styles';
+const LOCALE_HREF = 'reading-flow.ftl';
 
 export class StyleManager {
   private doc: Document | null = null;
@@ -20,8 +21,7 @@ export class StyleManager {
     this.doc?.getElementById(STYLE_ID)?.remove();
   }
 
-  public injectLocale(win: Window, rootURI: string) {
-    if (!rootURI) return;
+  public injectLocale(win: Window, _rootURI: string) {
     const mozXULElement = (win as any).MozXULElement;
     const insertFTLIfNeeded = mozXULElement?.insertFTLIfNeeded;
 
@@ -29,6 +29,6 @@ export class StyleManager {
       return;
     }
 
-    insertFTLIfNeeded.call(mozXULElement, `${rootURI}locale/en-US/reading-flow.ftl`);
+    insertFTLIfNeeded.call(mozXULElement, LOCALE_HREF);
   }
 }

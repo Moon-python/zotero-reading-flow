@@ -138,8 +138,8 @@ function setupMenu(selectedItems: any[], dataById: Record<number, FlowData | Err
     manager,
     mutationCalls,
     submenu,
-    menuByLabel(label: string) {
-      return submenu.menus.find((menu: any) => menu.l10nID === label);
+    menuByL10nID(l10nID: string) {
+      return submenu.menus.find((menu: any) => (menu.l10nID ?? menu.l10nId) === l10nID);
     }
   };
 }
@@ -154,6 +154,28 @@ test('submenu is enabled for a selected regular item', async () => {
   await submenu.onShowing(new Event('showing'), context);
 
   assert.equal(context.enabled, true);
+});
+
+test('menus keep l10n IDs for Zotero MenuManager rendering', () => {
+  const item = makeRegularItem(20);
+  const { submenu, menuByL10nID } = setupMenu([item], { 20: flowData() });
+
+  assert.equal(submenu.l10nID, 'reading-flow-menu');
+  assert.equal(menuByL10nID('reading-flow-resume-reading').l10nID, 'reading-flow-resume-reading');
+  assert.equal(menuByL10nID('reading-flow-queue-continue').l10nID, 'reading-flow-queue-continue');
+  assert.equal(menuByL10nID('reading-flow-reset-progress').l10nID, 'reading-flow-reset-progress');
+});
+
+test('resume menu is disabled for a non-resumable selected item', async () => {
+  const item = makeRegularItem(20);
+  const { menuByL10nID } = setupMenu([item], {
+    20: flowData({ lastAttachmentId: '10', lastPage: 3 })
+  });
+
+  const context = enabledContext();
+  await menuByL10nID('reading-flow-resume-reading').onShowing(new Event('showing'), context);
+
+  assert.equal(context.enabled, false);
 });
 
 test('submenu is enabled for exactly one resumable PDF attachment', async () => {
@@ -182,12 +204,12 @@ test('submenu is disabled for a single non-regular non-resumable item', async ()
 test('resume menu is registered and disabled for multi-select', async () => {
   const first = makeRegularItem(20);
   const second = makeRegularItem(21);
-  const { menuByLabel } = setupMenu([first, second], {
+  const { menuByL10nID } = setupMenu([first, second], {
     20: flowData({ lastAttachmentId: '10', lastPage: 3 }),
     21: flowData({ lastAttachmentId: '11', lastPage: 4 })
   });
 
-  const resumeMenu = menuByLabel('reading-flow-resume-reading');
+  const resumeMenu = menuByL10nID('reading-flow-resume-reading');
   const context = enabledContext();
   await resumeMenu.onShowing(new Event('showing'), context);
 
@@ -197,12 +219,12 @@ test('resume menu is registered and disabled for multi-select', async () => {
 
 test('resume menu is disabled when the single selected item has no resumable PDF', async () => {
   const item = makeRegularItem(20);
-  const { menuByLabel } = setupMenu([item], {
+  const { menuByL10nID } = setupMenu([item], {
     20: flowData()
   });
 
   const context = enabledContext();
-  await menuByLabel('reading-flow-resume-reading').onShowing(new Event('showing'), context);
+  await menuByL10nID('reading-flow-resume-reading').onShowing(new Event('showing'), context);
 
   assert.equal(context.enabled, false);
 });
@@ -210,11 +232,11 @@ test('resume menu is disabled when the single selected item has no resumable PDF
 test('resume menu command opens the selected resumable item', async () => {
   const parent = makeRegularItem(20);
   const attachment = makePdfAttachment(10, 20);
-  const { menuByLabel, openCalls } = setupMenu([parent], {
+  const { menuByL10nID, openCalls } = setupMenu([parent], {
     20: flowData({ lastAttachmentId: '10', lastPage: 5 })
   }, [parent, attachment]);
 
-  await menuByLabel('reading-flow-resume-reading').onCommand();
+  await menuByL10nID('reading-flow-resume-reading').onCommand();
 
   assert.deepEqual(openCalls, [[10, { pageIndex: 4 }]]);
 });
@@ -223,7 +245,7 @@ test('resume menu command logs outer resumeSelectedItem errors without rejecting
   const originalError = Logger.error;
   const errors: any[][] = [];
   const item = makeRegularItem(20);
-  const { manager, menuByLabel } = setupMenu([item], {});
+  const { manager, menuByL10nID } = setupMenu([item], {});
 
   Logger.error = (...args: any[]) => {
     errors.push(args);
@@ -233,7 +255,7 @@ test('resume menu command logs outer resumeSelectedItem errors without rejecting
   };
 
   try {
-    await assert.doesNotReject(menuByLabel('reading-flow-resume-reading').onCommand());
+    await assert.doesNotReject(menuByL10nID('reading-flow-resume-reading').onCommand());
 
     assert.equal(errors.length, 1);
     assert.equal(errors[0][0], 'resume reading failed for item 20');
@@ -250,7 +272,7 @@ test('resume menu command catches reader failures through ResumeReader warnings'
   const errors: string[] = [];
   const parent = makeRegularItem(20);
   const attachment = makePdfAttachment(10, 20);
-  const { menuByLabel } = setupMenu([parent], {
+  const { menuByL10nID } = setupMenu([parent], {
     20: flowData({ lastAttachmentId: '10', lastPage: 5 })
   }, [parent, attachment]);
 
@@ -265,7 +287,7 @@ test('resume menu command catches reader failures through ResumeReader warnings'
   };
 
   try {
-    await assert.doesNotReject(menuByLabel('reading-flow-resume-reading').onCommand());
+    await assert.doesNotReject(menuByL10nID('reading-flow-resume-reading').onCommand());
 
     assert.equal(errors.length, 0);
     assert.equal(warnings.length, 2);
@@ -293,17 +315,17 @@ test('queue menus skip items whose flow data cannot be read', async () => {
   try {
     const goodItem = makeRegularItem(20);
     const badItem = makeRegularItem(21);
-    const { menuByLabel, mutationCalls } = setupMenu([goodItem, badItem], {
+    const { menuByL10nID, mutationCalls } = setupMenu([goodItem, badItem], {
       20: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' }),
       21: new Error('extra parse failed')
     });
 
     const context = checkedContext();
     await assert.doesNotReject(async () => {
-      menuByLabel('reading-flow-queue-continue').onShowing(new Event('showing'), context);
+      menuByL10nID('reading-flow-queue-continue').onShowing(new Event('showing'), context);
     });
     await assert.doesNotReject(async () => {
-      menuByLabel('reading-flow-queue-continue').onCommand();
+      menuByL10nID('reading-flow-queue-continue').onCommand();
     });
 
     assert.equal(context.checked, true);
@@ -329,16 +351,16 @@ test('queue menus reflect checked state and do not mutate item data on command',
   try {
     const continueItem = makeRegularItem(20);
     const doneItem = makeRegularItem(21);
-    const { menuByLabel, mutationCalls } = setupMenu([continueItem, doneItem], {
+    const { menuByL10nID, mutationCalls } = setupMenu([continueItem, doneItem], {
       20: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' }),
       21: flowData({ p: { '11': 1 }, lastAttachmentId: '11' })
     });
 
     const continueContext = checkedContext();
     const staleContext = checkedContext();
-    menuByLabel('reading-flow-queue-continue').onShowing(new Event('showing'), continueContext);
-    menuByLabel('reading-flow-queue-stale').onShowing(new Event('showing'), staleContext);
-    menuByLabel('reading-flow-queue-continue').onCommand();
+    menuByL10nID('reading-flow-queue-continue').onShowing(new Event('showing'), continueContext);
+    menuByL10nID('reading-flow-queue-stale').onShowing(new Event('showing'), staleContext);
+    menuByL10nID('reading-flow-queue-continue').onCommand();
 
     assert.equal(continueContext.checked, true);
     assert.equal(staleContext.checked, false);
@@ -360,14 +382,14 @@ test('nearly done queue menu is checked and logs without mutating item data', as
   try {
     const nearlyDoneItem = makeRegularItem(20);
     const unreadItem = makeRegularItem(21);
-    const { menuByLabel, mutationCalls } = setupMenu([nearlyDoneItem, unreadItem], {
+    const { menuByL10nID, mutationCalls } = setupMenu([nearlyDoneItem, unreadItem], {
       20: flowData({ p: { '10': 0.9 }, lastAttachmentId: '10' }),
       21: flowData()
     });
 
     const context = checkedContext();
-    menuByLabel('reading-flow-queue-nearly-done').onShowing(new Event('showing'), context);
-    menuByLabel('reading-flow-queue-nearly-done').onCommand();
+    menuByL10nID('reading-flow-queue-nearly-done').onShowing(new Event('showing'), context);
+    menuByL10nID('reading-flow-queue-nearly-done').onCommand();
 
     assert.equal(context.checked, true);
     assert.deepEqual(mutationCalls, []);

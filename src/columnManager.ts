@@ -95,22 +95,32 @@ export class ColumnManager {
         }
 
         const percent = Math.max(1, Math.min(100, Math.round(value * 100)));
+        const trackRow = doc.createElement('span');
+        trackRow.style.cssText = [
+          'display:flex',
+          'align-items:center',
+          'width:100%',
+          'min-width:0',
+          'height:6px',
+          'gap:6px'
+        ].join(';');
+
         const label = doc.createElement('span');
         label.textContent = `${percent}%`;
         label.title = `${percent}% read`;
         label.style.cssText = [
-          'position:absolute',
-          'right:6px',
-          'top:50%',
-          'transform:translateY(-50%)',
           'z-index:1',
           'color:var(--fill-secondary, #666)',
           'font-size:10px',
           'line-height:1'
         ].join(';');
+        label.style.whiteSpace = 'nowrap';
+        label.style.flex = '0 0 auto';
 
         const track = doc.createElement('div');
         track.style.cssText = [
+          'flex:1',
+          'min-width:0',
           'width:100%',
           'height:6px',
           'background:rgba(0,0,0,0.1)',
@@ -124,8 +134,9 @@ export class ColumnManager {
         bar.style.cssText = `width:${percent}%;height:100%;background:${value >= 0.99 ? completedColor : readingColor};`;
 
         track.appendChild(bar);
-        cell.appendChild(label);
-        cell.appendChild(track);
+        trackRow.appendChild(track);
+        trackRow.appendChild(label);
+        cell.appendChild(trackRow);
         return cell;
       }
     });

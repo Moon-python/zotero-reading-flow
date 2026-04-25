@@ -7,6 +7,7 @@ export class ReaderTracker {
   private saveTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
   private active = false;
   private generation = 0;
+  private static readonly MAX_REASONABLE_PAGE_COUNT = 100000;
 
   constructor(dataStore: DataStore) {
     this.dataStore = dataStore;
@@ -57,15 +58,16 @@ export class ReaderTracker {
     if (!parentId) return;
 
     let progress = 0;
+    let pdfNumPages = 0;
     if (reader?._type === 'pdf' || item.isPDFAttachment?.()) {
       const pageIndex = this.getCurrentPageIndex(reader, item) ?? 0;
-      const numPages = this.getPDFPageCount(reader);
-      Logger.log('pdf pageIndex=' + pageIndex + ' numPages=' + numPages);
-      if (numPages > 0) {
-        progress = Math.min(pageIndex + 1, numPages) / numPages;
+      pdfNumPages = this.getPDFPageCount(reader, item);
+      Logger.log('pdf pageIndex=' + pageIndex + ' numPages=' + pdfNumPages);
+      if (pdfNumPages > 0) {
+        progress = Math.min(pageIndex + 1, pdfNumPages) / pdfNumPages;
       } else {
-        // Keep a visible fallback instead of leaving the custom column blank.
-        progress = pageIndex + 1;
+        Logger.log('pdf page count unavailable; skipping synthetic page number fallback');
+        progress = 0;
       }
     } else if (reader?._type === 'epub' || reader?._type === 'snapshot') {
       const savedPosition = item.getAttachmentLastPageIndex?.();
@@ -83,7 +85,8 @@ export class ReaderTracker {
       return;
     }
 
-    const lastPage = progress > 1 ? progress : this.getLastPage(reader, item);
+    const isPdfWithPages = (reader?._type === 'pdf' || item.isPDFAttachment?.()) && pdfNumPages > 0;
+    const lastPage = isPdfWithPages ? this.getLastPage(reader, item, pdfNumPages) : null;
     this.debounceSave(parentId, String(attachmentId), progress, lastPage);
   }
 
@@ -148,9 +151,14 @@ export class ReaderTracker {
     return progress > 1 ? Math.round(progress) : Math.min(1, progress);
   }
 
-  private getLastPage(reader: any, item: any): number | null {
+  private getLastPage(reader: any, item: any, maxPage?: number): number | null {
     const pageIndex = this.getCurrentPageIndex(reader, item);
-    return typeof pageIndex === 'number' && Number.isFinite(pageIndex) ? pageIndex + 1 : null;
+    if (typeof pageIndex !== 'number' || !Number.isFinite(pageIndex)) return null;
+    const page = pageIndex + 1;
+    if (!maxPage || maxPage <= 0) {
+      return page;
+    }
+    return Math.min(page, maxPage);
   }
 
   private getCurrentPageIndex(reader: any, item: any): number | null {
@@ -167,21 +175,62 @@ export class ReaderTracker {
     return null;
   }
 
-  private getPDFPageCount(reader: any): number {
+  private getPDFPageCount(reader: any, item: any): number {
     const primaryWindow =
       reader?._internalReader?._primaryView?._iframeWindow?.wrappedJSObject
-      ?? reader?._internalReader?._primaryView?._iframeWindow;
-    const readerWindow = reader?._iframeWindow?.wrappedJSObject ?? reader?._iframeWindow;
-    const app = primaryWindow?.PDFViewerApplication ?? readerWindow?.PDFViewerApplication;
+      ?? reader?._internalReader?._primaryView?._iframeWindow
+      ?? reader?._iframeWindow?.wrappedJSObject
+      ?? reader?._iframeWindow;
+    const readerWindow = reader?._internalReader?._iframeWindow?.wrappedJSObject
+      ?? reader?._internalReader?._iframeWindow
+      ?? reader?._iframeWindow?.wrappedJSObject
+      ?? reader?._iframeWindow;
+    const app = primaryWindow?.PDFViewerApplication ?? readerWindow?.PDFViewerApplication ?? reader?.PDFViewerApplication;
+    const itemPageCount = this.toPositiveInt(
+      item?.getField?.('numPages')
+      ?? item?.getField?.('pages')
+      ?? item?.getField?.('numPagesRaw')
+      ?? item?.getField?.('pageCount')
+    );
+    const normalizedItemPageCount = itemPageCount > 0 ? itemPageCount : undefined;
     const pageCount = (
-      app?.pdfDocument?.numPages
+      normalizedItemPageCount
+      ?? app?.pdfDocument?.numPages
       ?? app?.pdfViewer?.pagesCount
       ?? app?.pdfViewer?._pages?.length
       ?? app?.pagesCount
+      ?? app?._pagesCount
+      ?? app?._numPages
+      ?? reader?._numPages
+      ?? reader?._state?.numPages
+      ?? reader?._internalReader?._state?.numPages
+      ?? reader?._primaryView?._state?.numPages
       ?? 0
     );
-    return typeof pageCount === 'number' && Number.isFinite(pageCount) && pageCount > 0
-      ? Math.round(pageCount)
-      : 0;
+    const normalized = this.toPositiveInt(pageCount);
+
+    if (normalizedItemPageCount && normalized && normalized !== normalizedItemPageCount && Math.abs(normalized - normalizedItemPageCount) > 1) {
+      const pageCountFromReader = normalized;
+      Logger.warn(`PDF page count mismatch: metadata=${itemPageCount}, reader=${pageCountFromReader}; using metadata`);
+      return normalizedItemPageCount;
+    }
+
+    return normalized <= ReaderTracker.MAX_REASONABLE_PAGE_COUNT ? normalized : 0;
+  }
+
+  private toPositiveInt(value: unknown): number {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      return Math.round(value);
+    }
+
+    if (typeof value !== 'string') {
+      return 0;
+    }
+
+    const match = value.match(/\d+/);
+    if (!match) return 0;
+
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
   }
 }
