@@ -108,10 +108,8 @@ export class ReadingFlowMenuManager {
     const items = this.getSelectedRegularItems();
     if (!items.length) return false;
 
-    return items.some((item) => {
-      const state = this.getQueueStateForItem(item);
-      return state?.[queue] ?? false;
-    });
+    const states = items.map((item) => this.getQueueStateForItem(item));
+    return states.some((state) => state?.[queue] ?? false);
   }
 
   private logQueueSelection(queue: QueueKey) {

@@ -291,11 +291,11 @@ test('queue menus skip items whose flow data cannot be read', async () => {
   };
 
   try {
-    const badItem = makeRegularItem(20);
-    const goodItem = makeRegularItem(21);
-    const { menuByLabel, mutationCalls } = setupMenu([badItem, goodItem], {
-      20: new Error('extra parse failed'),
-      21: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' })
+    const goodItem = makeRegularItem(20);
+    const badItem = makeRegularItem(21);
+    const { menuByLabel, mutationCalls } = setupMenu([goodItem, badItem], {
+      20: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' }),
+      21: new Error('extra parse failed')
     });
 
     const context = checkedContext();
@@ -309,9 +309,9 @@ test('queue menus skip items whose flow data cannot be read', async () => {
     assert.equal(context.checked, true);
     assert.deepEqual(mutationCalls, []);
     assert.equal(logMessages.length, 1);
-    assert.match(logMessages[0], /continueReading: 21/);
+    assert.match(logMessages[0], /continueReading: 20/);
     assert.equal(warnings.length, 2);
-    assert.match(warnings[0], /failed to read queue state for item 20/);
+    assert.match(warnings[0], /failed to read queue state for item 21/);
     assert.match(warnings[0], /extra parse failed/);
   } finally {
     Logger.log = originalLog;
