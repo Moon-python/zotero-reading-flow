@@ -127,6 +127,31 @@ function setupMenu(selectedItems: any[], dataById: Record<number, FlowData>, ava
   };
 }
 
+test('submenu is enabled for a selected regular item', async () => {
+  const item = makeRegularItem(20);
+  const { submenu } = setupMenu([item], {
+    20: flowData()
+  });
+
+  const context = enabledContext();
+  await submenu.onShowing(new Event('showing'), context);
+
+  assert.equal(context.enabled, true);
+});
+
+test('submenu is enabled for exactly one resumable PDF attachment', async () => {
+  const parent = makeRegularItem(20);
+  const attachment = makePdfAttachment(10, 20);
+  const { submenu } = setupMenu([attachment], {
+    20: flowData({ lastAttachmentId: '10', lastPage: 5 })
+  }, [parent, attachment]);
+
+  const context = enabledContext();
+  await submenu.onShowing(new Event('showing'), context);
+
+  assert.equal(context.enabled, true);
+});
+
 test('resume menu is registered and disabled for multi-select', async () => {
   const first = makeRegularItem(20);
   const second = makeRegularItem(21);
@@ -167,6 +192,41 @@ test('resume menu command opens the selected resumable item', async () => {
   assert.deepEqual(openCalls, [[10, { pageIndex: 4 }]]);
 });
 
+test('resume menu command catches reader failures through ResumeReader warnings', async () => {
+  const originalWarn = Logger.warn;
+  const originalError = Logger.error;
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const parent = makeRegularItem(20);
+  const attachment = makePdfAttachment(10, 20);
+  const { menuByLabel } = setupMenu([parent], {
+    20: flowData({ lastAttachmentId: '10', lastPage: 5 })
+  }, [parent, attachment]);
+
+  Logger.warn = (message: string) => {
+    warnings.push(message);
+  };
+  Logger.error = (message: string) => {
+    errors.push(message);
+  };
+  (globalThis as any).Zotero.Reader.open = async () => {
+    throw new Error('reader failed');
+  };
+
+  try {
+    await assert.doesNotReject(menuByLabel('reading-flow-resume-reading').onCommand());
+
+    assert.equal(errors.length, 0);
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0], /opening 10 at saved page failed; retrying without location/);
+    assert.match(warnings[1], /failed to open attachment 10/);
+    assert.match(warnings[1], /reader failed/);
+  } finally {
+    Logger.warn = originalWarn;
+    Logger.error = originalError;
+  }
+});
+
 test('queue menus reflect checked state and do not mutate item data on command', async () => {
   const originalLog = Logger.log;
   const logMessages: string[] = [];
@@ -193,6 +253,34 @@ test('queue menus reflect checked state and do not mutate item data on command',
     assert.deepEqual(mutationCalls, []);
     assert.equal(logMessages.length, 1);
     assert.match(logMessages[0], /continueReading: 20/);
+  } finally {
+    Logger.log = originalLog;
+  }
+});
+
+test('nearly done queue menu is checked and logs without mutating item data', async () => {
+  const originalLog = Logger.log;
+  const logMessages: string[] = [];
+  Logger.log = (message: string) => {
+    logMessages.push(message);
+  };
+
+  try {
+    const nearlyDoneItem = makeRegularItem(20);
+    const unreadItem = makeRegularItem(21);
+    const { menuByLabel, mutationCalls } = setupMenu([nearlyDoneItem, unreadItem], {
+      20: flowData({ p: { '10': 0.9 }, lastAttachmentId: '10' }),
+      21: flowData()
+    });
+
+    const context = checkedContext();
+    menuByLabel('reading-flow-queue-nearly-done').onShowing(new Event('showing'), context);
+    menuByLabel('reading-flow-queue-nearly-done').onCommand();
+
+    assert.equal(context.checked, true);
+    assert.deepEqual(mutationCalls, []);
+    assert.equal(logMessages.length, 1);
+    assert.match(logMessages[0], /nearlyDone: 20/);
   } finally {
     Logger.log = originalLog;
   }
