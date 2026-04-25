@@ -53,31 +53,33 @@ export class ResumeReader {
     if (!item.isRegularItem?.()) return null;
 
     const data = this.dataStore.getData(item);
-    const attachment = await this.resolveParentAttachment(item, data);
-    if (!attachment) return null;
-
-    return {
-      attachment,
-      lastPage: data.lastPage
-    };
+    return this.resolveParentTarget(item, data);
   }
 
-  private async resolveParentAttachment(item: ZoteroItem, data: FlowData): Promise<ZoteroItem | null> {
-    const trackedAttachment = this.getTrackedAttachment(data.lastAttachmentId);
-    if (trackedAttachment) return trackedAttachment;
+  private async resolveParentTarget(item: ZoteroItem, data: FlowData): Promise<ResumeTarget | null> {
+    const trackedAttachment = this.getTrackedAttachment(data.lastAttachmentId, item.id);
+    if (trackedAttachment) {
+      return {
+        attachment: trackedAttachment,
+        lastPage: data.lastPage
+      };
+    }
 
     const bestAttachment = await item.getBestAttachment?.();
     if (!bestAttachment || !this.isPdfAttachment(bestAttachment)) return null;
-    return bestAttachment;
+    return {
+      attachment: bestAttachment,
+      lastPage: null
+    };
   }
 
-  private getTrackedAttachment(lastAttachmentId: string | null): ZoteroItem | null {
+  private getTrackedAttachment(lastAttachmentId: string | null, parentId: number): ZoteroItem | null {
     const id = this.parsePositiveId(lastAttachmentId);
     if (!id) return null;
 
     try {
       const item = (globalThis as any).Zotero?.Items?.get?.(id);
-      return this.isPdfAttachment(item) ? item : null;
+      return this.isPdfAttachment(item) && this.idsEqual(item.parentID, parentId) ? item : null;
     } catch (error) {
       Logger.warn(`ResumeReader: failed to resolve tracked attachment ${id}`);
       return null;
@@ -92,7 +94,10 @@ export class ResumeReader {
 
     try {
       const parent = (globalThis as any).Zotero?.Items?.get?.(parentID);
-      return parent?.isRegularItem?.() ? this.dataStore.getData(parent).lastPage : null;
+      if (!parent?.isRegularItem?.()) return null;
+
+      const data = this.dataStore.getData(parent);
+      return this.idsEqual(data.lastAttachmentId, attachment.id) ? data.lastPage : null;
     } catch (error) {
       Logger.warn(`ResumeReader: failed to resolve parent item ${parentID}: ${this.getErrorMessage(error)}`);
       return null;
@@ -154,7 +159,23 @@ export class ResumeReader {
   }
 
   private parsePositiveNumber(value: unknown): number | null {
-    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+    return this.parsePositiveInteger(value);
+  }
+
+  private idsEqual(left: unknown, right: unknown): boolean {
+    const leftId = this.parsePositiveInteger(left);
+    const rightId = this.parsePositiveInteger(right);
+    return leftId !== null && rightId !== null && leftId === rightId;
+  }
+
+  private parsePositiveInteger(value: unknown): number | null {
+    if (typeof value === 'number') {
+      return Number.isInteger(value) && value > 0 ? value : null;
+    }
+    if (typeof value !== 'string' || !value.trim()) return null;
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 && String(parsed) === value.trim() ? parsed : null;
   }
 
   private getErrorMessage(error: unknown): string {

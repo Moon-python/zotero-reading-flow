@@ -34,7 +34,7 @@ function regularItem(id: number, attachment?: any) {
 }
 
 test('canResume returns true when parent lastAttachmentId resolves to a PDF attachment', async () => {
-  const attachment = pdfAttachment(10);
+  const attachment = pdfAttachment(10, 20);
   const parent = regularItem(20);
   (globalThis as any).Zotero = {
     Items: {
@@ -60,7 +60,7 @@ test('canResume returns true when parent lastAttachmentId resolves to a PDF atta
 
 test('resume opens parent last attachment at stored 1-based lastPage converted to 0-based pageIndex', async () => {
   const calls: any[] = [];
-  const attachment = pdfAttachment(10);
+  const attachment = pdfAttachment(10, 20);
   const parent = regularItem(20);
   (globalThis as any).Zotero = {
     Items: {
@@ -89,7 +89,7 @@ test('resume opens parent last attachment at stored 1-based lastPage converted t
 
 test('resume falls back to best PDF attachment when parent lastAttachmentId is invalid', async () => {
   const calls: any[] = [];
-  const attachment = pdfAttachment(11);
+  const attachment = pdfAttachment(11, 20);
   const parent = regularItem(20, attachment);
   (globalThis as any).Zotero = {
     Items: {
@@ -111,12 +111,12 @@ test('resume falls back to best PDF attachment when parent lastAttachmentId is i
   } as any);
 
   assert.equal(await reader.resume(parent), true);
-  assert.deepEqual(calls, [[11, { pageIndex: 2 }]]);
+  assert.deepEqual(calls, [[11, undefined]]);
 });
 
 test('resume falls back to best PDF attachment when tracked attachment is not a PDF', async () => {
   const calls: any[] = [];
-  const attachment = pdfAttachment(11);
+  const attachment = pdfAttachment(11, 20);
   const parent = regularItem(20, attachment);
   (globalThis as any).Zotero = {
     Items: {
@@ -145,10 +145,40 @@ test('resume falls back to best PDF attachment when tracked attachment is not a 
   } as any);
 
   assert.equal(await reader.resume(parent), true);
-  assert.deepEqual(calls, [[11, { pageIndex: 4 }]]);
+  assert.deepEqual(calls, [[11, undefined]]);
 });
 
-test('resume uses PDF attachment directly and reads parent lastPage when parentID exists', async () => {
+test('resume ignores tracked PDF from a different parent and opens best attachment without stale page', async () => {
+  const calls: any[] = [];
+  const fallbackAttachment = pdfAttachment(11, 20);
+  const otherParentAttachment = pdfAttachment(10, 99);
+  const parent = regularItem(20, fallbackAttachment);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return otherParentAttachment;
+      }
+    },
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 5 });
+    }
+  } as any);
+
+  assert.equal(await reader.resume(parent), true);
+  assert.deepEqual(calls, [[11, undefined]]);
+});
+
+test('resume uses PDF attachment directly and reads parent lastPage when parent lastAttachmentId matches', async () => {
   const calls: any[] = [];
   const attachment = pdfAttachment(10, 20);
   const parent = regularItem(20);
@@ -169,12 +199,41 @@ test('resume uses PDF attachment directly and reads parent lastPage when parentI
   const reader = new ResumeReader({
     getData(item: any) {
       assert.equal(item, parent);
-      return flowData({ lastPage: 4 });
+      return flowData({ lastAttachmentId: '10', lastPage: 4 });
     }
   } as any);
 
   assert.equal(await reader.resume(attachment), true);
   assert.deepEqual(calls, [[10, { pageIndex: 3 }]]);
+});
+
+test('resume opens direct PDF without stale page when parent lastAttachmentId points to a sibling', async () => {
+  const calls: any[] = [];
+  const attachmentB = pdfAttachment(11, 20);
+  const parent = regularItem(20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 20);
+        return parent;
+      }
+    },
+    Reader: {
+      async open(...args: any[]) {
+        calls.push(args);
+      }
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 4 });
+    }
+  } as any);
+
+  assert.equal(await reader.resume(attachmentB), true);
+  assert.deepEqual(calls, [[11, undefined]]);
 });
 
 test('resume opens without location when no positive lastPage is available', async () => {
@@ -296,7 +355,7 @@ test('resume retries without location when opening at page location throws', asy
   const reader = new ResumeReader({
     getData(item: any) {
       assert.equal(item, parent);
-      return flowData({ lastPage: 2 });
+      return flowData({ lastAttachmentId: '10', lastPage: 2 });
     }
   } as any);
 
