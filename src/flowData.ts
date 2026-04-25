@@ -12,6 +12,7 @@ export interface FlowData {
 }
 
 export const FLOW_PREFIX = 'ReadingFlow: ';
+export const READ_PROGRESS_THRESHOLD = 0.95;
 
 export const DEFAULT_FLOW_DATA: FlowData = {
   v: 1,
@@ -95,7 +96,7 @@ export function getDisplayProgress(data: FlowData): number {
 export function inferStatus(data: FlowData): ReadingStatus {
   if (data.s) return data.s;
   const progress = getDisplayProgress(data);
-  if (progress >= 0.95 && progress <= 1) return 'read';
+  if (progress >= READ_PROGRESS_THRESHOLD && progress <= 1) return 'read';
   if (progress > 0) return 'reading';
   return 'to-read';
 }

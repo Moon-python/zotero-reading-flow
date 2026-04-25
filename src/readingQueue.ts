@@ -1,8 +1,7 @@
-import { FlowData, getDisplayProgress, inferStatus } from './flowData';
+import { FlowData, getDisplayProgress, inferStatus, READ_PROGRESS_THRESHOLD } from './flowData';
 
 export const STALE_READING_MS = 7 * 24 * 60 * 60 * 1000;
 const MIN_NEARLY_DONE = 0.8;
-const READ_PROGRESS_THRESHOLD = 0.95;
 
 export interface ReadingQueueState {
   continueReading: boolean;
