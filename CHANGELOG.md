@@ -1,5 +1,11 @@
 # Changelog
 
+# 1.1.12 - 2026-04-26
+
+### Changed
+
+- Improved README user-facing wording for first-time setup and practical research workflows.
+
 # 1.1.11 - 2026-04-26
 
 ### Fixed
