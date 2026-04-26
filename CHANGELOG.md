@@ -5,6 +5,8 @@
 ### Changed
 
 - Polished README setup guidance for first-time users, with practical research workflow examples.
+- Removed unfinished queue/popover features from code and tests, and cleaned menu/queue references so only shipped behavior remains.
+- Added `npm run check:release-profile` for reproducible install/profile validation before shipping.
 
 # 1.1.11 - 2026-04-26
 
