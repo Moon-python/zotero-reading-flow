@@ -5,7 +5,7 @@
 ### Changed
 
 - Polished README setup guidance for first-time users, with practical research workflow examples.
-- Removed unfinished queue/popover features from code and tests, and cleaned menu/queue references so only shipped behavior remains.
+- Removed unfinished experimental menu/popover features from code and tests, so only shipped behavior remains.
 - Added `npm run check:release-profile` for reproducible install/profile validation before shipping.
 
 # 1.1.11 - 2026-04-26
@@ -44,7 +44,7 @@
 ### Fixed
 
 - Added explicit native-menu label fallbacks for all `Reading Flow` submenu actions so labels render reliably in Zotero context menus.
-- Made menu commands use Zotero's command context, preserving the selected item for resume, status, queue, and reset actions.
+- Made menu commands use Zotero's command context, preserving the selected item for resume, status, and reset actions.
 
 ## 1.1.3 - 2026-04-25
 
