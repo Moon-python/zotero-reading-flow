@@ -1,79 +1,95 @@
 # Zotero Reading Flow
 
-Zotero Reading Flow is a Zotero 9 plugin for tracking PDF reading progress directly in the Zotero item tree.
+[![Latest](https://img.shields.io/github/v/release/Moon-python/zotero-reading-flow?label=Latest%20Release)](https://github.com/Moon-python/zotero-reading-flow/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Moon-python/zotero-reading-flow/latest/zotero-reading-flow.xpi)](https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/zotero-reading-flow.xpi)
+[![Zotero](https://img.shields.io/badge/Zotero-9.0%20%7C%209.0.*-blue)](https://www.zotero.org/download/)
 
-It adds compact reading workflow columns, stores progress in Zotero item metadata, and provides a right-click menu for manual reading status updates.
+Zotero Reading Flow helps you resume papers quickly and keep reading progress visible at a glance.
+
+It adds reading-focused columns to the library, remembers your last read position, and adds a small context menu workflow for status updates.
+
+> Best for: literature researchers, thesis students, and anyone who reads many PDFs across projects and wants to pick up exactly where they stopped.
+
+## For researchers, in practice
+
+- **Skip duplicate scrolling:** open a tracked item and resume near your last position.
+- **See what to continue:** progress, status, and last-read time are shown in the item tree.
+- **Manage reading stages:** `To Read`, `Reading`, `Skimmed`, `Read`, `Important`.
+- **Handle messy PDFs:** works with items that have multiple attachments under one parent record.
+
+## Do this in 30 seconds
+
+1. Install from the latest GitHub release.
+2. Open a PDF and read a few pages.
+3. Return to the library and right-click the same item.
+4. Pick **Reading Flow → Resume Reading** and continue from your last position.
+
+If this is your first use, columns appear automatically after install.
+
+## Features
+
+- `Progress`: shows the latest tracked position for each paper in one glance.
+- `Status`: displays your reading state (`To Read`, `Reading`, `Skimmed`, `Read`, `Important`) and keeps it synced with library changes.
+- `Last Read`: shows when this paper was last updated (`5 min ago`, `today`, `yesterday`, ...).
+- `Reading Flow` menu: **Resume Reading**, fast status updates, and **Reset Reading Progress**.
+- Auto behavior: first-run columns are enabled, reader page totals are preferred when available, and menu labels are robust across Zotero UI paths.
 
 ## Compatibility
 
 - Zotero: `9.0` through `9.0.*`
-- Tested locally with Zotero `9.0.1` on macOS ARM64
+- Tested with Zotero `9.0.1` on macOS ARM64
 - Plugin ID: `readingflow@moon.com`
-- Current version: `1.1.11`
-
-The compatibility range is intentionally limited to Zotero 9 until newer Zotero versions are tested.
-
-## Features
-
-- `Progress` column: shows reading progress for the most recently read attachment when available.
-- `Status` column: shows an explicit status badge or derives status from progress.
-- `Last Read` column: shows compact relative time for the latest tracked read event.
-- Library item context menu: right-click selected items and use `Reading Flow` to mark status or reset progress.
-- `Resume Reading`: right-click a tracked item or PDF attachment to reopen it near the last tracked page.
-- `Reading Queue` hints: menu indicators for papers to continue, nearly finished papers, and stale reading.
-- Multi-attachment aware storage: progress is stored per attachment ID under a single parent item.
-- Zotero sync-friendly storage: data is stored in the parent item's `Extra` field as a `ReadingFlow: {...}` line.
-
-## Data Stored in Extra
-
-Reading Flow stores one line in the parent item's `Extra` field:
-
-```text
-ReadingFlow: {"v":1,"p":{"12345":0.72},"c":null,"s":"reading","ts":1776945900,"lastAttachmentId":"12345","lastPage":18,"lastReadAt":1776945900000}
-```
-
-The plugin preserves other `Extra` lines and rewrites only its own `ReadingFlow:` line.
 
 ## Install
 
-1. Download `zotero-reading-flow.xpi` from the GitHub release.
+1. Download `zotero-reading-flow.xpi` from the latest GitHub release.
 2. Open Zotero.
-3. Go to `Tools` -> `Add-ons`.
-4. Choose `Install Add-on From File`.
-5. Select `zotero-reading-flow.xpi`.
-6. Restart Zotero if Zotero asks for it.
+3. Go to **Tools → Add-ons**.
+4. Click **Install Add-on From File...** and select the `.xpi`.
+5. Restart Zotero if prompted.
 
-After installation, enable the item-tree columns from Zotero's column picker if they are not visible by default.
+The plugin update URL is:
 
-## Use
+```text
+https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/updates.json
+```
 
-Open a PDF attachment in Zotero's reader. Reading Flow listens for reader page-change events and writes progress after a short debounce.
+## Quick start
 
-In the library item tree:
+1. Open a PDF in Zotero Reader and read some pages.
+2. Return to the library.
+3. Right-click the same item and select **Reading Flow → Resume Reading** to continue where you left off.
+4. Right-click a regular item and use **Reading Flow → Mark as ...** for status updates.
+5. Use **Reading Flow → Reset Reading Progress** when you want to restart tracking from scratch.
 
-- Show `Progress` to see the current tracked reading progress.
-- Show `Status` to see `To Read`, `Reading`, `Skimmed`, `Read`, or `Important`.
-- Show `Last Read` to see when progress was last updated.
+If you want, keep your columns always visible:
 
-To manually update status:
+1. In the library, open the column menu.
+2. Enable `Progress`, `Status`, and `Last Read`.
+3. They are auto-shown on first install, but this can help when the layout has changed.
 
-1. Select one or more regular Zotero items.
-2. Right-click the selection.
-3. Open `Reading Flow`.
-4. Choose a status or `Reset Reading Progress`.
+## FAQ
 
-To resume reading:
+- How do I know this is actually working?
+  Read one PDF, open the same item in the library, and confirm `Progress` updates from the last-read page.
+- Can I use it on Zotero 8?
+  The current update channel is configured for Zotero `9.0` to `9.0.*`.
+- Does it modify my PDFs?
+  No, it stores reading metadata only in Zotero item metadata.
 
-1. Select a tracked Zotero item or PDF attachment.
-2. Right-click the selection.
-3. Open `Reading Flow`.
-4. Choose `Resume Reading`.
+## Data and sync behavior
 
-If Reading Flow has a saved page number, it tries to reopen the PDF near that page. If page navigation is unavailable, it opens the PDF normally.
+Reading Flow stores progress in the parent item’s `Extra` field as one namespaced line:
 
-Reading Queue hints in the menu are indicators/logging only in this first iteration. They can point out papers to continue, nearly finished papers, or stale reading, but they do not change reading status.
+```text
+ReadingFlow: {"v":1, ...}
+```
 
-## Build
+It preserves unrelated `Extra` metadata and only updates this plugin’s own `ReadingFlow:` line.
+
+## Build and verification
+
+Run the project checks before release or local release testing:
 
 ```bash
 npm ci
@@ -83,33 +99,21 @@ npm run verify
 `npm run verify` runs:
 
 - TypeScript typecheck
-- Unit tests for the data model
+- Unit tests
 - XPI build
-- XPI/update manifest validation
-
-## Release Files
-
-Each release should attach both files:
-
-- `zotero-reading-flow.xpi`
-- `updates.json`
-
-The manifest update URL points to:
-
-```text
-https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/updates.json
-```
-
-## Known Warnings
-
-Zotero 9.0.1 may log `ItemTreeColumnManager` deprecation warnings during custom column registration. The plugin has been observed to load and register successfully despite those warnings.
-
-Other installed plugins may emit `ChromeUtils.import()` warnings. Reading Flow's packaged `bootstrap.js` is checked to reject that removed API.
+- Update manifest validation
 
 ## Troubleshooting
 
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+- If columns are not visible, restart Zotero once and check the library column chooser.
+- If context menu actions do not appear, verify that a regular item is selected (or a PDF attachment for `Resume Reading`).
+- If you need full help, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-## Release Checklist
+## Known Warnings
 
-See [docs/RELEASE.md](docs/RELEASE.md).
+- Zotero may show occasional internal warnings related to item-tree or add-on initialization order in some environments.
+- These are usually harmless if columns and menu items still appear; if they block normal use, include your Zotero version and a short error snippet in troubleshooting.
+
+## Release notes
+
+Use [docs/RELEASE.md](docs/RELEASE.md) for release process details.
