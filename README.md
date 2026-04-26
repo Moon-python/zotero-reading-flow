@@ -1,43 +1,41 @@
 # Zotero Reading Flow
 
-**Pick up your papers exactly where you left off — without re-scrolling.**
+**Turn your Zotero library into a reading dashboard.**
 
 [![Latest](https://img.shields.io/github/v/release/Moon-python/zotero-reading-flow?label=Latest%20Release)](https://github.com/Moon-python/zotero-reading-flow/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Moon-python/zotero-reading-flow/latest/zotero-reading-flow.xpi)](https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/zotero-reading-flow.xpi)
 [![Zotero](https://img.shields.io/badge/Zotero-9.0%20%7C%209.0.*-blue)](https://www.zotero.org/download/)
 
-<!-- HERO: replace with a 10–15s GIF showing right-click → Resume Reading → reader opens at the saved page. -->
-![Zotero Reading Flow demo](docs/assets/hero.gif)
+![Reading Flow columns in the library](docs/assets/columns.png)
 
-Zotero Reading Flow adds reading-focused columns to your library (`Progress`, `Status`, `Last Read`), remembers the last page you read, and gives you a one-click **Resume Reading** action from the context menu.
+Zotero Reading Flow adds reading-focused columns to your library so you can see each paper's progress, reading status, and last-read time before opening the PDF.
 
-> Best for: literature researchers, thesis students, and anyone who reads many PDFs across projects and wants to pick up exactly where they stopped.
+> Best for: literature researchers, thesis students, and anyone who manages many PDFs across projects and wants Zotero to show what is unread, in progress, important, or finished.
 
 ## For researchers, in practice
 
-- **Skip duplicate scrolling:** open a tracked item and resume near your last position.
-- **See what to continue:** progress, status, and last-read time are shown in the item tree.
-- **Manage reading stages:** `To Read`, `Reading`, `Skimmed`, `Read`, `Important`.
+- **Scan your reading workload:** progress, status, and last-read time are visible directly in the item tree.
+- **Manage reading stages:** mark papers as `To Read`, `Reading`, `Skimmed`, `Read`, or `Important`.
+- **Find what needs attention:** spot unfinished, recently touched, and completed papers without opening each PDF.
 - **Handle messy PDFs:** works with items that have multiple attachments under one parent record.
+- **Resume when useful:** open the tracked PDF near its saved page from the Reading Flow menu.
 
 ## Do this in 30 seconds
 
 1. Install from the latest GitHub release.
-2. Open a PDF and read a few pages.
-3. Return to the library and right-click the same item.
-4. Pick **Reading Flow → Resume Reading** and continue from your last position.
+2. Open Zotero and check the new `Progress`, `Status`, and `Last Read` columns.
+3. Right-click a paper and set its reading state with **Reading Flow → Mark as ...**.
+4. Open a PDF and read as usual; Reading Flow updates the library row as progress is tracked.
+5. Use **Reading Flow → Resume Reading** when you want to reopen the tracked PDF from its saved page.
 
 If this is your first use, columns appear automatically after install.
 
 ## Features
 
-<!-- Optional: place a screenshot of the three columns in the library here. -->
-![Reading Flow columns in the library](docs/assets/columns.png)
-
 - `Progress`: shows the latest tracked position for each paper in one glance.
 - `Status`: displays your reading state (`To Read`, `Reading`, `Skimmed`, `Read`, `Important`) and keeps it synced with library changes.
 - `Last Read`: shows when this paper was last updated (`5 min ago`, `today`, `yesterday`, ...).
-- `Reading Flow` menu: **Resume Reading**, fast status updates, and **Reset Reading Progress**.
+- `Reading Flow` menu: fast status updates, **Resume Reading**, and **Reset Reading Progress**.
 - Auto behavior: first-run columns are enabled, reader page totals are preferred when available, and menu labels are robust across Zotero UI paths.
 
 ## Compatibility
@@ -62,14 +60,11 @@ https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/upda
 
 ## Quick start
 
-<!-- Optional: screenshot of the right-click "Reading Flow" submenu. -->
-![Reading Flow context menu](docs/assets/menu.png)
-
-1. Open a PDF in Zotero Reader and read some pages.
-2. Return to the library.
-3. Right-click the same item and select **Reading Flow → Resume Reading** to continue where you left off.
-4. Right-click a regular item and use **Reading Flow → Mark as ...** for status updates.
-5. Use **Reading Flow → Reset Reading Progress** when you want to restart tracking from scratch.
+1. Use the item-tree columns to scan which papers are unread, in progress, important, or finished.
+2. Right-click a regular item and use **Reading Flow → Mark as ...** for status updates.
+3. Open and read PDFs in Zotero as usual; progress and last-read time update on the parent item.
+4. Use **Reading Flow → Resume Reading** when you want to reopen the tracked PDF from its saved page.
+5. Use **Reading Flow → Reset Reading Progress** when you want to restart tracking for an item.
 
 If you want, keep your columns always visible:
 
@@ -80,7 +75,7 @@ If you want, keep your columns always visible:
 ## FAQ
 
 - How do I know this is actually working?
-  Read one PDF, open the same item in the library, and confirm `Progress` updates from the last-read page.
+  Read one PDF, return to the library, and confirm the row shows updated `Progress`, `Status`, or `Last Read` values.
 - Can I use it on Zotero 8?
   The current update channel is configured for Zotero `9.0` to `9.0.*`.
 - Does it modify my PDFs?

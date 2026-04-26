@@ -6,7 +6,7 @@ Post this in the **Zotero forums** (https://forums.zotero.org/). Plugin-related 
 
 ## Title
 
-> [Plugin] Reading Flow — Resume PDFs at the last read page, with `Progress` / `Status` / `Last Read` columns (Zotero 9.0)
+> [Plugin] Reading Flow — `Progress` / `Status` / `Last Read` columns for Zotero reading workflows (Zotero 9.0)
 
 ## Body
 
@@ -17,13 +17,13 @@ I wrote this plugin during my PhD research and have been using it daily for seve
 **What it does**
 
 - Adds three columns to the library item tree: `Progress`, `Status` (`To Read` / `Reading` / `Skimmed` / `Read` / `Important`), and `Last Read`.
-- Adds a **Reading Flow** submenu to the item right-click menu: **Resume Reading**, quick status updates, and **Reset Reading Progress**.
-- Remembers the last page you read per item and reopens the reader there automatically.
+- Adds a **Reading Flow** submenu to the item right-click menu for quick status updates, **Resume Reading**, and **Reset Reading Progress**.
+- Tracks the last page you read per item, so the row reflects current reading progress and Resume Reading can reopen the tracked PDF near that page.
 - Stores all reading state in the item's `Extra` field as a single namespaced `ReadingFlow:` line — no external database, round-trips through Zotero sync unchanged.
 
 **Why it exists**
 
-If you read PDFs across many projects, you've probably opened a paper, scrolled for thirty seconds to find where you stopped, and lost the thread before you started. This is the smallest possible fix for that.
+If you read PDFs across many projects, the hard part is not just opening a paper again; it is knowing which papers are unread, in progress, important, or finished before opening each one. Reading Flow turns the Zotero item list into a lightweight reading dashboard.
 
 **Compatibility**
 

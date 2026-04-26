@@ -8,8 +8,8 @@ You can't skip this. Without screenshots, both the README and the forum post loo
 
 - [ ] Set up a clean test library with 4–6 papers in mixed reading states (`To Read`, `Reading`, `Skimmed`, `Read`).
 - [ ] Capture `docs/assets/columns.png` — the three columns in the item tree.
-- [ ] Capture `docs/assets/menu.png` — the right-click `Reading Flow` submenu expanded.
-- [ ] Capture `docs/assets/hero.gif` — 10–15s: right-click → Resume Reading → reader opens on saved page. Keep under 4 MB.
+- [ ] Capture `docs/assets/menu.png` — optional secondary shot of the current `Reading Flow` submenu only. Do not show removed experimental entries.
+- [ ] Capture `docs/assets/hero.gif` — optional 10-15s demo focused on the library columns updating after a status/progress change. Keep under 4 MB.
 - [ ] Spot-check the README on GitHub after committing — confirm all three render inline.
 
 See `docs/assets/README.md` for framing/sizing details.
@@ -17,7 +17,7 @@ See `docs/assets/README.md` for framing/sizing details.
 ## Block B — Polish the GitHub side (Priority 2)
 
 - [ ] Commit the asset files and the README placeholders together so GitHub never shows broken images.
-- [ ] On the GitHub repo page (Settings → top of repo): set a one-line **About** description — copy the README headline ("Pick up your papers exactly where you left off — without re-scrolling.").
+- [ ] On the GitHub repo page (Settings → top of repo): set a one-line **About** description — copy the README headline ("Turn your Zotero library into a reading dashboard.").
 - [ ] Add topics: `zotero`, `zotero-plugin`, `zotero-9`, `pdf`, `reading`, `research-tools`. Topics drive GitHub search.
 - [ ] Pin the repo on your GitHub profile.
 - [ ] Optional: enable GitHub **Discussions** so users have a place to ask questions without filing issues.
@@ -35,7 +35,7 @@ The official plugin directory at https://www.zotero.org/support/plugins is a com
 - [ ] Wait until the forum thread has at least one substantive reply (shows the plugin is alive).
 - [ ] Reply on your own thread or send a short message asking that the plugin be added to https://www.zotero.org/support/plugins, with these fields ready:
   - **Name:** Reading Flow
-  - **Description (one line):** Resume Zotero PDFs at the last read page; adds Progress / Status / Last Read columns and a Reading Flow context menu.
+  - **Description (one line):** Adds Progress / Status / Last Read columns and a Reading Flow context menu for managing Zotero reading state.
   - **Repo:** https://github.com/Moon-python/zotero-reading-flow
   - **Compatibility:** Zotero 9.0–9.0.*
   - **Author:** Moon-python
