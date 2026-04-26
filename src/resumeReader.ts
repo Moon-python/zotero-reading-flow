@@ -76,10 +76,11 @@ export class ResumeReader {
 
   private async resolveTarget(item: ZoteroItem): Promise<ResumeTarget | null> {
     if (this.isPdfAttachment(item)) {
+      const parentData = this.getParentData(item);
       return {
         attachment: item,
         lastPage: this.getAttachmentLastPage(item),
-        totalPages: this.getAttachmentPageCount(item)
+        totalPages: this.getAttachmentPageCount(item, parentData)
       };
     }
 
@@ -149,6 +150,20 @@ export class ResumeReader {
     }
 
     return this.readAttachmentPageCountFromMetadata(attachment);
+  }
+
+  private getParentData(item: ZoteroItem): FlowData | undefined {
+    const parentId = this.parsePositiveNumber(item.parentID);
+    if (!parentId) return undefined;
+
+    try {
+      const parent = (globalThis as any).Zotero?.Items?.get?.(parentId);
+      if (!parent?.isRegularItem?.()) return undefined;
+      return this.dataStore.getData(parent);
+    } catch (error) {
+      Logger.warn(`ResumeReader: failed to resolve parent item data for attachment ${item.id}: ${this.getErrorMessage(error)}`);
+      return undefined;
+    }
   }
 
   private async openAttachment(attachmentId: number, location: ReaderLocation): Promise<boolean> {

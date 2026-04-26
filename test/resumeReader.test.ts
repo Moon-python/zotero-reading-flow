@@ -8,12 +8,15 @@ function flowData(updates: Partial<FlowData> = {}): FlowData {
   return { ...DEFAULT_FLOW_DATA, ...updates };
 }
 
-function pdfAttachment(id: number, parentID?: number) {
+function pdfAttachment(id: number, parentID?: number, fields?: Record<string, any>) {
   return {
     id,
     parentID,
     isPDFAttachment() {
       return true;
+    },
+    getField(fieldName: string) {
+      return fields?.[fieldName];
     }
   };
 }
@@ -352,6 +355,64 @@ test('resume opens direct PDF without stale page when parent lastAttachmentId po
 
   assert.equal(await reader.resume(attachmentB), true);
   assert.deepEqual(calls, [[11, undefined]]);
+});
+
+test('getResumeDisplayTarget for direct PDF attachment uses cached total pages from parent flow data', async () => {
+  const attachment = pdfAttachment(10, 20, { numPages: 50 });
+  const parent = regularItem(20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 20);
+        return parent;
+      }
+    },
+    Reader: {
+      async open() {}
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 4, pageCount: { '10': 7 } });
+    }
+  } as any);
+
+  const target = await reader.getResumeDisplayTarget(attachment);
+  assert.equal(target.canResume, true);
+  assert.equal(target.totalPages, 7);
+  assert.equal(target.l10nArgs, JSON.stringify({ mode: 'page-total', page: 4, total: 7 }));
+  assert.equal(target.fallbackLabel, 'Resume at Page 4 / 7');
+});
+
+test('direct PDF attachment falls back to PDF metadata when parent cache page count is unavailable', async () => {
+  const attachment = pdfAttachment(10, 20, { numPages: 12 });
+  const parent = regularItem(20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 20);
+        return parent;
+      }
+    },
+    Reader: {
+      async open() {}
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 4 });
+    }
+  } as any);
+
+  const target = await reader.getResumeDisplayTarget(attachment);
+  assert.equal(target.canResume, true);
+  assert.equal(target.totalPages, 12);
+  assert.equal(target.fallbackLabel, 'Resume at Page 4 / 12');
+  assert.equal(target.l10nArgs, JSON.stringify({ mode: 'page-total', page: 4, total: 12 }));
 });
 
 test('resume opens without location when no positive lastPage is available', async () => {

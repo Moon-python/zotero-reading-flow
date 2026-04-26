@@ -1,5 +1,11 @@
 # Changelog
 
+# 1.1.9 - 2026-04-26
+
+### Fixed
+
+- Improved Resume Reading context label for direct PDF items by using parent flow data for `/ N` when available and PDF metadata as fallback, so PDF items selected directly now keep stable page context.
+
 ## 1.1.8 - 2026-04-26
 
 ### Fixed
