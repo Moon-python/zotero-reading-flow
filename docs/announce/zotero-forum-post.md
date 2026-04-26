@@ -12,7 +12,7 @@ Post this in the **Zotero forums** (https://forums.zotero.org/). Plugin-related 
 
 Hi all,
 
-I wrote this plugin during my PhD research and have been using it in my own Zotero workflow. Sharing it here in case it's useful to others using Zotero 9.
+I wrote this plugin during my PhD research and have been using it in my own Zotero workflow. Some older reading/progress workflow plugins or snippets no longer fit the current Zotero 9 add-on environment, so I wanted a small Zotero 9-compatible version that I can keep extending.
 
 **What it does**
 
@@ -24,6 +24,8 @@ I wrote this plugin during my PhD research and have been using it in my own Zote
 **Why it exists**
 
 If you read PDFs across many projects, the hard part is not just opening a paper again; it is knowing which papers are unread, in progress, important, or finished before opening each one. Reading Flow turns the Zotero item list into a lightweight reading dashboard.
+
+This is still intentionally small, but I plan to keep improving it as Zotero 9 settles and as users report real workflow gaps.
 
 **Compatibility**
 
