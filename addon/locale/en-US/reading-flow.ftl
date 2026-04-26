@@ -7,12 +7,6 @@ reading-flow-resume-reading =
             [page] Resume at Page { $page }
            *[default] Resume Reading
         }
-reading-flow-queue-continue =
-    .label = Continue Reading
-reading-flow-queue-nearly-done =
-    .label = Nearly Done
-reading-flow-queue-stale =
-    .label = Stale Reading
 reading-flow-status-to-read =
     .label = Mark as To Read
 reading-flow-status-reading =

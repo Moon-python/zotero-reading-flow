@@ -84,15 +84,6 @@ function setLabelContext() {
   };
 }
 
-function checkedContext() {
-  return {
-    checked: undefined as boolean | undefined,
-    setChecked(value: boolean) {
-      this.checked = value;
-    }
-  };
-}
-
 function setupMenu(selectedItems: any[], dataById: Record<number, FlowData | Error>, availableItems = selectedItems) {
   let registeredMenu: any;
   const openCalls: any[] = [];
@@ -192,7 +183,6 @@ test('menus keep l10n IDs for Zotero MenuManager rendering', () => {
 
   assert.equal(submenu.l10nID, 'reading-flow-menu');
   assert.equal(menuByL10nID('reading-flow-resume-reading').l10nID, 'reading-flow-resume-reading');
-  assert.equal(menuByL10nID('reading-flow-queue-continue').l10nID, 'reading-flow-queue-continue');
   assert.equal(menuByL10nID('reading-flow-reset-progress').l10nID, 'reading-flow-reset-progress');
 });
 
@@ -202,9 +192,6 @@ test('menus include direct labels as a fallback for nested native menu rendering
 
   assert.equal(submenu.label, 'Reading Flow');
   assert.equal(menuByL10nID('reading-flow-resume-reading').label, 'Resume Reading');
-  assert.equal(menuByL10nID('reading-flow-queue-continue').label, 'Continue Reading');
-  assert.equal(menuByL10nID('reading-flow-queue-nearly-done').label, 'Nearly Done');
-  assert.equal(menuByL10nID('reading-flow-queue-stale').label, 'Stale Reading');
   assert.equal(menuByL10nID('reading-flow-status-to-read').label, 'Mark as To Read');
   assert.equal(menuByL10nID('reading-flow-status-reading').label, 'Mark as Reading');
   assert.equal(menuByL10nID('reading-flow-status-skimmed').label, 'Mark as Skimmed');
@@ -444,105 +431,5 @@ test('resume menu command catches reader failures through ResumeReader warnings'
   } finally {
     Logger.warn = originalWarn;
     Logger.error = originalError;
-  }
-});
-
-test('queue menus skip items whose flow data cannot be read', async () => {
-  const originalLog = Logger.log;
-  const originalWarn = Logger.warn;
-  const logMessages: string[] = [];
-  const warnings: string[] = [];
-  Logger.log = (message: string) => {
-    logMessages.push(message);
-  };
-  Logger.warn = (message: string) => {
-    warnings.push(message);
-  };
-
-  try {
-    const goodItem = makeRegularItem(20);
-    const badItem = makeRegularItem(21);
-    const { menuByL10nID, mutationCalls } = setupMenu([goodItem, badItem], {
-      20: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' }),
-      21: new Error('extra parse failed')
-    });
-
-    const context = checkedContext();
-    await assert.doesNotReject(async () => {
-      menuByL10nID('reading-flow-queue-continue').onShowing(new Event('showing'), context);
-    });
-    await assert.doesNotReject(async () => {
-      menuByL10nID('reading-flow-queue-continue').onCommand();
-    });
-
-    assert.equal(context.checked, true);
-    assert.deepEqual(mutationCalls, []);
-    assert.equal(logMessages.length, 1);
-    assert.match(logMessages[0], /continueReading: 20/);
-    assert.equal(warnings.length, 2);
-    assert.match(warnings[0], /failed to read queue state for item 21/);
-    assert.match(warnings[0], /extra parse failed/);
-  } finally {
-    Logger.log = originalLog;
-    Logger.warn = originalWarn;
-  }
-});
-
-test('queue menus reflect checked state and do not mutate item data on command', async () => {
-  const originalLog = Logger.log;
-  const logMessages: string[] = [];
-  Logger.log = (message: string) => {
-    logMessages.push(message);
-  };
-
-  try {
-    const continueItem = makeRegularItem(20);
-    const doneItem = makeRegularItem(21);
-    const { menuByL10nID, mutationCalls } = setupMenu([continueItem, doneItem], {
-      20: flowData({ p: { '10': 0.85 }, lastAttachmentId: '10' }),
-      21: flowData({ p: { '11': 1 }, lastAttachmentId: '11' })
-    });
-
-    const continueContext = checkedContext();
-    const staleContext = checkedContext();
-    menuByL10nID('reading-flow-queue-continue').onShowing(new Event('showing'), continueContext);
-    menuByL10nID('reading-flow-queue-stale').onShowing(new Event('showing'), staleContext);
-    menuByL10nID('reading-flow-queue-continue').onCommand();
-
-    assert.equal(continueContext.checked, true);
-    assert.equal(staleContext.checked, false);
-    assert.deepEqual(mutationCalls, []);
-    assert.equal(logMessages.length, 1);
-    assert.match(logMessages[0], /continueReading: 20/);
-  } finally {
-    Logger.log = originalLog;
-  }
-});
-
-test('nearly done queue menu is checked and logs without mutating item data', async () => {
-  const originalLog = Logger.log;
-  const logMessages: string[] = [];
-  Logger.log = (message: string) => {
-    logMessages.push(message);
-  };
-
-  try {
-    const nearlyDoneItem = makeRegularItem(20);
-    const unreadItem = makeRegularItem(21);
-    const { menuByL10nID, mutationCalls } = setupMenu([nearlyDoneItem, unreadItem], {
-      20: flowData({ p: { '10': 0.9 }, lastAttachmentId: '10' }),
-      21: flowData()
-    });
-
-    const context = checkedContext();
-    menuByL10nID('reading-flow-queue-nearly-done').onShowing(new Event('showing'), context);
-    menuByL10nID('reading-flow-queue-nearly-done').onCommand();
-
-    assert.equal(context.checked, true);
-    assert.deepEqual(mutationCalls, []);
-    assert.equal(logMessages.length, 1);
-    assert.match(logMessages[0], /nearlyDone: 20/);
-  } finally {
-    Logger.log = originalLog;
   }
 });
