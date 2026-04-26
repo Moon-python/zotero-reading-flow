@@ -15,14 +15,46 @@ type ReaderLocation = { pageIndex: number } | undefined;
 type ResumeTarget = {
   attachment: ZoteroItem;
   lastPage: number | null;
+  totalPages: number | null;
+};
+
+export type ResumeDisplayTarget = {
+  canResume: boolean;
+  attachmentId?: number;
+  lastPage?: number | null;
+  totalPages?: number | null;
+  l10nArgs?: string;
+  fallbackLabel: string;
 };
 
 export class ResumeReader {
   constructor(private readonly dataStore: DataStore) {}
 
   public async canResume(item: ZoteroItem): Promise<boolean> {
+    const target = await this.getResumeDisplayTarget(item);
+    return target.canResume;
+  }
+
+  public async getResumeDisplayTarget(item: ZoteroItem): Promise<ResumeDisplayTarget> {
     const target = await this.resolveTargetSafely(item);
-    return Boolean(target);
+    if (!target) {
+      return { canResume: false, fallbackLabel: 'Resume Reading' };
+    }
+
+    const canResume = this.isPositiveInteger(target.lastPage);
+    const lastPage = canResume ? target.lastPage : null;
+    const totalPages = canResume ? target.totalPages : null;
+    const fallbackLabel = this.getFallbackLabel(lastPage, totalPages);
+    const l10nArgs = this.getL10nArgs(lastPage, totalPages);
+
+    return {
+      canResume,
+      attachmentId: target.attachment.id,
+      lastPage: target.lastPage,
+      totalPages,
+      l10nArgs,
+      fallbackLabel
+    };
   }
 
   public async resume(item: ZoteroItem): Promise<boolean> {
@@ -46,7 +78,8 @@ export class ResumeReader {
     if (this.isPdfAttachment(item)) {
       return {
         attachment: item,
-        lastPage: this.getAttachmentLastPage(item)
+        lastPage: this.getAttachmentLastPage(item),
+        totalPages: this.getAttachmentPageCount(item)
       };
     }
 
@@ -61,7 +94,8 @@ export class ResumeReader {
     if (trackedAttachment) {
       return {
         attachment: trackedAttachment,
-        lastPage: data.lastPage
+        lastPage: data.lastPage,
+        totalPages: this.getAttachmentPageCount(trackedAttachment, data)
       };
     }
 
@@ -69,7 +103,8 @@ export class ResumeReader {
     if (!bestAttachment || !this.isPdfAttachment(bestAttachment)) return null;
     return {
       attachment: bestAttachment,
-      lastPage: null
+      lastPage: null,
+      totalPages: this.getAttachmentPageCount(bestAttachment, data)
     };
   }
 
@@ -102,6 +137,18 @@ export class ResumeReader {
       Logger.warn(`ResumeReader: failed to resolve parent item ${parentID}: ${this.getErrorMessage(error)}`);
       return null;
     }
+  }
+
+  private getAttachmentPageCount(attachment: ZoteroItem, parentData?: FlowData): number | null {
+    const attachmentId = this.parsePositiveNumber(attachment.id);
+    if (!attachmentId) return null;
+
+    const cachedPageCount = this.parsePositiveNumber(parentData?.pageCount?.[String(attachmentId)]);
+    if (cachedPageCount) {
+      return cachedPageCount;
+    }
+
+    return this.readAttachmentPageCountFromMetadata(attachment);
   }
 
   private async openAttachment(attachmentId: number, location: ReaderLocation): Promise<boolean> {
@@ -145,6 +192,22 @@ export class ResumeReader {
       : undefined;
   }
 
+  private getFallbackLabel(lastPage: number | null, totalPages: number | null): string {
+    if (!lastPage) return 'Resume Reading';
+    if (totalPages) return `Resume at Page ${lastPage} / ${totalPages}`;
+    return `Resume at Page ${lastPage}`;
+  }
+
+  private getL10nArgs(lastPage: number | null, totalPages: number | null): string | undefined {
+    if (!lastPage) return undefined;
+
+    if (totalPages) {
+      return JSON.stringify({ mode: 'page-total', page: lastPage, total: totalPages });
+    }
+
+    return JSON.stringify({ mode: 'page', page: lastPage });
+  }
+
   private isPdfAttachment(item: ZoteroItem | null | undefined): boolean {
     return Boolean(item?.id && item.isPDFAttachment?.());
   }
@@ -160,6 +223,18 @@ export class ResumeReader {
 
   private parsePositiveNumber(value: unknown): number | null {
     return this.parsePositiveInteger(value);
+  }
+
+  private readAttachmentPageCountFromMetadata(attachment: ZoteroItem): number | null {
+    const getField = (attachment as any)?.getField;
+    if (typeof getField !== 'function') return null;
+
+    return this.parsePositiveNumber(
+      getField.call(attachment, 'numPages')
+      ?? getField.call(attachment, 'pages')
+      ?? getField.call(attachment, 'numPagesRaw')
+      ?? getField.call(attachment, 'pageCount')
+    );
   }
 
   private idsEqual(left: unknown, right: unknown): boolean {
@@ -180,5 +255,9 @@ export class ResumeReader {
 
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  private isPositiveInteger(value: number | null): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value > 0;
   }
 }

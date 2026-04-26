@@ -46,10 +46,24 @@ function makeUnsupportedItem(id: number) {
 }
 
 function enabledContext() {
+  const menuElem: any = {
+    label: undefined as string | undefined
+  };
+  menuElem.setAttribute = (name: string, value: string) => {
+    if (name === 'label') {
+      menuElem.label = value;
+    }
+  };
+
   return {
     enabled: undefined as boolean | undefined,
+    l10nArgs: undefined as string | undefined,
+    menuElem,
     setEnabled(value: boolean) {
       this.enabled = value;
+    },
+    setL10nArgs(value: string) {
+      this.l10nArgs = value;
     }
   };
 }
@@ -193,6 +207,36 @@ test('resume menu is disabled for a non-resumable selected item', async () => {
   await menuByL10nID('reading-flow-resume-reading').onShowing(new Event('showing'), context);
 
   assert.equal(context.enabled, false);
+});
+
+test('resume menu updates dynamic label and l10n args for resumable page state', async () => {
+  const parent = makeRegularItem(20);
+  const attachment = makePdfAttachment(10, 20);
+  const { menuByL10nID } = setupMenu([parent], {
+    20: flowData({ lastAttachmentId: '10', lastPage: 4, pageCount: { '10': 7 } })
+  }, [parent, attachment]);
+
+  const context = enabledContext();
+  await menuByL10nID('reading-flow-resume-reading').onShowing(new Event('showing'), context);
+
+  assert.equal(context.enabled, true);
+  assert.equal(context.l10nArgs, JSON.stringify({ mode: 'page-total', page: 4, total: 7 }));
+  assert.equal(context.menuElem.label, 'Resume at Page 4 / 7');
+});
+
+test('resume menu keeps fallback label when resume is not available', async () => {
+  const parent = makeRegularItem(20);
+  const attachment = makePdfAttachment(10, 20);
+  const { menuByL10nID } = setupMenu([parent], {
+    20: flowData({ lastAttachmentId: '10' })
+  }, [parent, attachment]);
+
+  const context = enabledContext();
+  await menuByL10nID('reading-flow-resume-reading').onShowing(new Event('showing'), context);
+
+  assert.equal(context.enabled, false);
+  assert.equal(context.l10nArgs, undefined);
+  assert.equal(context.menuElem.label, 'Resume Reading');
 });
 
 test('submenu is enabled for exactly one resumable PDF attachment', async () => {

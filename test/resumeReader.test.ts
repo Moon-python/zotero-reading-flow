@@ -51,11 +51,71 @@ test('canResume returns true when parent lastAttachmentId resolves to a PDF atta
   const reader = new ResumeReader({
     getData(item: any) {
       assert.equal(item, parent);
-      return flowData({ lastAttachmentId: '10' });
+      return flowData({ lastAttachmentId: '10', lastPage: 4 });
     }
   } as any);
 
   assert.equal(await reader.canResume(parent), true);
+});
+
+test('getResumeDisplayTarget provides dynamic menu metadata for page and total', async () => {
+  const attachment = pdfAttachment(10, 20);
+  const parent = regularItem(20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return attachment;
+      }
+    },
+    Reader: {
+      async open() {}
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10', lastPage: 4, pageCount: { '10': 5 } });
+    }
+  } as any);
+
+  const target = await reader.getResumeDisplayTarget(parent);
+  assert.equal(target.canResume, true);
+  assert.equal(target.attachmentId, 10);
+  assert.equal(target.lastPage, 4);
+  assert.equal(target.totalPages, 5);
+  assert.equal(target.l10nArgs, JSON.stringify({ mode: 'page-total', page: 4, total: 5 }));
+  assert.equal(target.fallbackLabel, 'Resume at Page 4 / 5');
+});
+
+test('getResumeDisplayTarget disables resume when no last page is known', async () => {
+  const attachment = pdfAttachment(10, 20);
+  const parent = regularItem(20);
+  (globalThis as any).Zotero = {
+    Items: {
+      get(id: number) {
+        assert.equal(id, 10);
+        return attachment;
+      }
+    },
+    Reader: {
+      async open() {}
+    }
+  };
+
+  const reader = new ResumeReader({
+    getData(item: any) {
+      assert.equal(item, parent);
+      return flowData({ lastAttachmentId: '10' });
+    }
+  } as any);
+
+  const target = await reader.getResumeDisplayTarget(parent);
+  assert.equal(target.canResume, false);
+  assert.equal(target.lastPage, null);
+  assert.equal(target.l10nArgs, undefined);
+  assert.equal(target.fallbackLabel, 'Resume Reading');
 });
 
 test('resume opens parent last attachment at stored 1-based lastPage converted to 0-based pageIndex', async () => {

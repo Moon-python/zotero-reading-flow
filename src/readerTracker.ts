@@ -87,10 +87,17 @@ export class ReaderTracker {
 
     const isPdfWithPages = (reader?._type === 'pdf' || item.isPDFAttachment?.()) && pdfNumPages > 0;
     const lastPage = isPdfWithPages ? this.getLastPage(reader, item, pdfNumPages) : null;
-    this.debounceSave(parentId, String(attachmentId), progress, lastPage);
+    const pageCount = isPdfWithPages ? pdfNumPages : null;
+    this.debounceSave(parentId, String(attachmentId), progress, lastPage, pageCount);
   }
 
-  private debounceSave(parentId: number, attachmentId: string, progress: number, lastPage: number | null) {
+  private debounceSave(
+    parentId: number,
+    attachmentId: string,
+    progress: number,
+    lastPage: number | null,
+    pageCount: number | null
+  ) {
     const key = `${parentId}:${attachmentId}`;
     const existingTimeout = this.saveTimeouts.get(key);
     if (existingTimeout) clearTimeout(existingTimeout);
@@ -116,6 +123,7 @@ export class ReaderTracker {
           }
           await this.dataStore.updateData(parentItem, {
             p: { [attachmentId]: nextProgress },
+            pageCount: pageCount ? { [attachmentId]: pageCount } : undefined,
             lastAttachmentId: attachmentId,
             lastPage,
             lastReadAt: Date.now()

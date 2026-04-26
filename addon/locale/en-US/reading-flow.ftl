@@ -1,7 +1,12 @@
 reading-flow-menu =
     .label = Reading Flow
 reading-flow-resume-reading =
-    .label = Resume Reading
+    .label =
+        { $mode ->
+            [page-total] Resume at Page { $page } / { $total }
+            [page] Resume at Page { $page }
+           *[default] Resume Reading
+        }
 reading-flow-queue-continue =
     .label = Continue Reading
 reading-flow-queue-nearly-done =

@@ -3,6 +3,7 @@ export type ReadingStatus = 'to-read' | 'reading' | 'skimmed' | 'read' | 'import
 export interface FlowData {
   v: number;
   p: { [attId: string]: number };
+  pageCount?: { [attId: string]: number };
   c: string | null;
   s: ReadingStatus | null;
   ts: number;
@@ -26,6 +27,7 @@ export const DEFAULT_FLOW_DATA: FlowData = {
 };
 
 const VALID_STATUSES = new Set<ReadingStatus>(['to-read', 'reading', 'skimmed', 'read', 'important']);
+const MAX_REASONABLE_PAGE_COUNT = 100000;
 
 export function normalizeFlowData(input: any): FlowData {
   const progress: { [attId: string]: number } = {};
@@ -37,6 +39,8 @@ export function normalizeFlowData(input: any): FlowData {
     }
   }
 
+  const pageCount = normalizePageCountMap(input?.pageCount);
+
   const lastAttachmentId =
     typeof input?.lastAttachmentId === 'string' && input.lastAttachmentId
       ? input.lastAttachmentId
@@ -45,6 +49,7 @@ export function normalizeFlowData(input: any): FlowData {
   return {
     v: 1,
     p: progress,
+    pageCount: Object.keys(pageCount).length ? pageCount : undefined,
     c: typeof input?.c === 'string' ? input.c : null,
     s: VALID_STATUSES.has(input?.s) ? input.s : null,
     ts: finiteNumberOrZero(input?.ts),
@@ -59,10 +64,12 @@ export function mergeFlowData(current: FlowData, updates: Partial<FlowData>, now
     Object.prototype.hasOwnProperty.call(updates, 'p')
     && updates.p
     && Object.keys(updates.p).length === 0;
+  const mergedPageCount = { ...(current.pageCount || {}), ...(updates.pageCount || {}) };
   const nextWithoutTimestamp = normalizeFlowData({
     ...current,
     ...updates,
     p: shouldReplaceProgress ? {} : { ...current.p, ...(updates.p || {}) },
+    pageCount: Object.keys(mergedPageCount).length ? mergedPageCount : undefined,
     ts: current.ts
   });
   return { ...nextWithoutTimestamp, ts: now };
@@ -124,4 +131,18 @@ function finiteNumberOrNull(value: unknown): number | null {
 
 function finitePositiveIntegerOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
+
+function normalizePageCountMap(input: unknown): { [attId: string]: number } {
+  const normalized: { [attId: string]: number } = {};
+  if (!input || typeof input !== 'object') return normalized;
+
+  for (const [key, value] of Object.entries(input)) {
+    const pageCount = finitePositiveIntegerOrNull(value);
+    if (pageCount && pageCount <= MAX_REASONABLE_PAGE_COUNT) {
+      normalized[key] = pageCount;
+    }
+  }
+
+  return normalized;
 }

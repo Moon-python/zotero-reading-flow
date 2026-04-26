@@ -14,6 +14,7 @@ test('normalizeFlowData preserves valid v1 fields and drops invalid values', () 
   const data = normalizeFlowData({
     v: 99,
     p: { '10': 0.5, '11': 8.2, bad: Number.NaN, zero: 0 },
+    pageCount: { '10': 5, '11': 12, bad: Number.NaN, zero: 0, tooLarge: 200001 },
     c: '#123456',
     s: 'important',
     ts: 100,
@@ -25,6 +26,7 @@ test('normalizeFlowData preserves valid v1 fields and drops invalid values', () 
   assert.deepEqual(data, {
     v: 1,
     p: { '10': 0.5, '11': 8 },
+    pageCount: { '10': 5, '11': 12 },
     c: '#123456',
     s: 'important',
     ts: 100,
@@ -58,11 +60,13 @@ test('mergeFlowData preserves progress map and updates recency metadata', () => 
   const current = normalizeFlowData({
     p: { '10': 0.4 },
     lastAttachmentId: '10',
+    pageCount: { '10': 5 },
     ts: 50
   });
 
   const merged = mergeFlowData(current, {
     p: { '11': 0.2 },
+    pageCount: { '10': 5, '11': 12 },
     lastAttachmentId: '11',
     lastPage: 2,
     lastReadAt: 1000
@@ -73,6 +77,7 @@ test('mergeFlowData preserves progress map and updates recency metadata', () => 
   assert.equal(merged.lastAttachmentId, '11');
   assert.equal(merged.lastPage, 2);
   assert.equal(merged.lastReadAt, 1000);
+  assert.deepEqual(merged.pageCount, { '10': 5, '11': 12 });
 });
 
 test('mergeFlowData can intentionally clear progress for reset actions', () => {
