@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Improved README user-facing wording for first-time setup and practical research workflows.
+- Polished README setup guidance for first-time users, with practical research workflow examples.
 
 # 1.1.11 - 2026-04-26
 
