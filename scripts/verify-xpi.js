@@ -1,11 +1,10 @@
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 const crypto = require('crypto');
+const { ADDON_ID, XPI_NAME, UPDATE_URL, releaseXpiUrl } = require('./release-config');
 
-const XPI_PATH = 'zotero-reading-flow.xpi';
+const XPI_PATH = XPI_NAME;
 const UPDATES_PATH = 'updates.json';
-const ADDON_ID = 'readingflow@moon.com';
-const UPDATE_URL = 'https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/updates.json';
 const REQUIRED_FILES = [
   'manifest.json',
   'bootstrap.js',
@@ -112,7 +111,7 @@ if (!update) {
 if (update.version !== manifest.version) {
   fail(`updates.json version ${update.version} does not match manifest version ${manifest.version}`);
 }
-if (update.update_link !== `https://github.com/Moon-python/zotero-reading-flow/releases/download/v${manifest.version}/${XPI_PATH}`) {
+if (update.update_link !== releaseXpiUrl(manifest.version)) {
   fail('updates.json update_link should point at the versioned GitHub release XPI asset');
 }
 const expectedHash = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(XPI_PATH)).digest('hex')}`;

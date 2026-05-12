@@ -12,6 +12,7 @@ import {
 
 export class DataStore {
   private cache = new LRUCache<number, FlowData>(2000);
+  private resetTimestamps = new Map<number, number>();
   private closed = false;
 
   public getData(item: any): FlowData {
@@ -36,40 +37,50 @@ export class DataStore {
     return data;
   }
 
-  public async updateData(item: any, updates: Partial<FlowData>) {
+  public async updateData(item: any, updates: Partial<FlowData>): Promise<boolean> {
     if (this.isClosedOrShuttingDown()) {
       Logger.log('ReadingFlow: write skipped during shutdown');
-      return;
+      return false;
     }
 
     if (typeof item.isDirty === 'function' && item.isDirty()) {
       Logger.warn('ReadingFlow: Item dirty, skipping write to prevent race condition');
-      return;
+      return false;
     }
 
     const current = this.getData(item);
     
     // Last write wins check
-    if (updates.ts && updates.ts < current.ts) return;
+    if (updates.ts && updates.ts < current.ts) return false;
 
     const nextWithoutTimestamp = mergeFlowData(current, updates, current.ts);
-    if (isFlowDataSame(current, nextWithoutTimestamp)) return;
+    if (isFlowDataSame(current, nextWithoutTimestamp)) return false;
 
     const merged = mergeFlowData(current, updates);
 
-    this.cache.set(item.id, merged);
-
-    let extra = item.getField('extra') || '';
-    const lines = extra.split('\n').filter((line: string) => !line.startsWith(FLOW_PREFIX));
+    const originalExtra = item.getField('extra') || '';
+    const lines = originalExtra.split('\n').filter((line: string) => !line.startsWith(FLOW_PREFIX));
     lines.push(`${FLOW_PREFIX}${JSON.stringify(merged)}`);
 
     if (this.isClosedOrShuttingDown()) {
       Logger.log('ReadingFlow: write skipped before saveTx during shutdown');
-      return;
+      return false;
     }
     
     item.setField('extra', lines.join('\n'));
-    await item.saveTx();
+    try {
+      await item.saveTx();
+      this.cache.set(item.id, merged);
+      return true;
+    } catch (error) {
+      try {
+        item.setField('extra', originalExtra);
+      } catch {
+        // Best-effort rollback. The cache is still cleared below.
+      }
+      this.cache.delete(item.id);
+      throw error;
+    }
   }
 
   public async setStatus(item: any, status: ReadingStatus | null) {
@@ -77,6 +88,7 @@ export class DataStore {
   }
 
   public async resetProgress(item: any) {
+    this.resetTimestamps.set(item.id, Date.now());
     await this.updateData(item, {
       p: {},
       s: 'to-read',
@@ -88,11 +100,17 @@ export class DataStore {
 
   public clearCache(itemId: number) {
     this.cache.delete(itemId);
+    this.resetTimestamps.delete(itemId);
+  }
+
+  public getResetTimestamp(itemId: number): number | null {
+    return this.resetTimestamps.get(itemId) ?? null;
   }
 
   public close() {
     this.closed = true;
     this.cache.clear();
+    this.resetTimestamps.clear();
   }
 
   private isClosedOrShuttingDown(): boolean {

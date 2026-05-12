@@ -195,6 +195,60 @@ test('ReaderTracker does not emit synthetic page number when page count is unava
   assert.equal(savedCall, null);
 });
 
+test('ReaderTracker skips a pending save when the parent was reset after scheduling', async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalDateNow = Date.now;
+  const callbacks: Array<() => Promise<void>> = [];
+  const updates: any[] = [];
+  const dataStore = {
+    getResetTimestamp(parentId: number) {
+      assert.equal(parentId, 20);
+      return 2000;
+    },
+    getData() {
+      return { p: {} };
+    },
+    async updateData(...args: any[]) {
+      updates.push(args);
+    }
+  };
+  const tracker = new ReaderTracker(dataStore as any);
+
+  (globalThis as any).setTimeout = (callback: () => Promise<void>) => {
+    callbacks.push(callback);
+    return 1;
+  };
+  Date.now = () => 1000;
+  (globalThis as any).Zotero = {
+    Items: {
+      async getAsync(id: number) {
+        assert.equal(id, 20);
+        return { id: 20 };
+      }
+    },
+    ItemTreeManager: {
+      refreshColumns() {}
+    },
+    Notifier: {
+      trigger() {}
+    }
+  };
+  (tracker as any).active = true;
+  (tracker as any).generation = 1;
+
+  try {
+    (tracker as any).debounceSave(20, '10', 0.5, 2, 4);
+    assert.equal(callbacks.length, 1);
+
+    await callbacks[0]();
+
+    assert.deepEqual(updates, []);
+  } finally {
+    (globalThis as any).setTimeout = originalSetTimeout;
+    Date.now = originalDateNow;
+  }
+});
+
 test('Progress column uses full cell width for the track instead of shrinking it with a fixed label slot', async () => {
   const registeredColumns: any[] = [];
   const fakeDoc = {

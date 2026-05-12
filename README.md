@@ -3,10 +3,10 @@
 > **Stop opening every PDF just to remember where you left off.**
 > Reading Flow turns your Zotero library into a reading dashboard — see progress, status, and last-read time directly in the item tree.
 
-[![Latest](https://img.shields.io/github/v/release/Moon-python/zotero-reading-flow?label=Latest%20Release)](https://github.com/Moon-python/zotero-reading-flow/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Moon-python/zotero-reading-flow/latest/zotero-reading-flow.xpi?label=Downloads%20%28latest%29)](https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/zotero-reading-flow.xpi)
+[![Latest](https://img.shields.io/github/v/release/moonweave/zotero-reading-flow?label=Latest%20Release)](https://github.com/moonweave/zotero-reading-flow/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/moonweave/zotero-reading-flow/latest/zotero-reading-flow.xpi?label=Downloads%20%28latest%29)](https://github.com/moonweave/zotero-reading-flow/releases/latest/download/zotero-reading-flow.xpi)
 [![Zotero](https://img.shields.io/badge/Zotero-9.0%20%7C%209.0.*-blue)](https://www.zotero.org/download/)
-[![License](https://img.shields.io/github/license/Moon-python/zotero-reading-flow)](LICENSE)
+[![License](https://img.shields.io/github/license/moonweave/zotero-reading-flow)](LICENSE)
 
 ![Reading Flow columns in the library](docs/assets/columns.png)
 
@@ -49,7 +49,7 @@ Read a PDF, return to the library, and the row updates itself:
 
 ## Install (30 seconds)
 
-1. Download **`zotero-reading-flow.xpi`** from the [latest release](https://github.com/Moon-python/zotero-reading-flow/releases/latest).
+1. Download **`zotero-reading-flow.xpi`** from the [latest release](https://github.com/moonweave/zotero-reading-flow/releases/latest).
 2. In Zotero, open **Tools → Add-ons**.
 3. Click **Install Add-on From File...** and select the `.xpi`.
 4. Restart Zotero if prompted.
@@ -58,7 +58,7 @@ Read a PDF, return to the library, and the row updates itself:
 The auto-update URL is:
 
 ```text
-https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/updates.json
+https://github.com/moonweave/zotero-reading-flow/releases/latest/download/updates.json
 ```
 
 ### Use it
@@ -76,7 +76,7 @@ If the columns are hidden later (e.g. after a layout change), open the library c
 | --- | --- |
 | **Progress** | Latest tracked position for each paper, at a glance. |
 | **Status** | Reading state (`To Read`, `Reading`, `Skimmed`, `Read`, `Important`), kept in sync with library changes. |
-| **Last Read** | Human-friendly timestamp (`5 min ago`, `today`, `yesterday`, …). |
+| **Last Read** | Human-friendly timestamp (`now`, `5m`, `3h`, `2d`, or a date). |
 | **Reading Flow menu** | Fast status updates, **Resume Reading**, and **Reset Reading Progress**. |
 | **Auto behavior** | First-run columns are enabled, reader page totals are preferred when available, and menu labels are robust across Zotero UI paths. |
 

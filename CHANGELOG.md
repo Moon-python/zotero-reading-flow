@@ -1,5 +1,14 @@
 # Changelog
 
+# 1.1.14 - 2026-05-12
+
+### Fixed
+
+- Prevented delayed reader progress saves from restoring progress after `Reset Reading Progress`.
+- Avoided optimistic cache state when Zotero item saves fail, keeping UI state aligned with persisted metadata.
+- Updated release and update URLs to the canonical `moonweave/zotero-reading-flow` GitHub repository.
+- Corrected README `Last Read` examples to match the compact labels shown by the plugin.
+
 # 1.1.13 - 2026-04-26
 
 ### Fixed

@@ -2,10 +2,7 @@ const esbuild = require('esbuild');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const crypto = require('crypto');
-
-const ADDON_ID = 'readingflow@moon.com';
-const XPI_NAME = 'zotero-reading-flow.xpi';
-const RELEASE_BASE_URL = 'https://github.com/Moon-python/zotero-reading-flow/releases/download';
+const { ADDON_ID, XPI_NAME, releaseXpiUrl } = require('./scripts/release-config');
 
 function writeUpdateManifest() {
   const manifest = JSON.parse(fs.readFileSync('addon/manifest.json', 'utf8'));
@@ -18,7 +15,7 @@ function writeUpdateManifest() {
         updates: [
           {
             version,
-            update_link: `${RELEASE_BASE_URL}/v${version}/${XPI_NAME}`,
+            update_link: releaseXpiUrl(version),
             update_hash: `sha256:${hash}`,
             applications: {
               zotero: {

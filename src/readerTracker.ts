@@ -102,6 +102,7 @@ export class ReaderTracker {
     const existingTimeout = this.saveTimeouts.get(key);
     if (existingTimeout) clearTimeout(existingTimeout);
     const generation = this.generation;
+    const scheduledAt = Date.now();
     const timeout = setTimeout(async () => {
       this.saveTimeouts.delete(key);
       if (this.shouldSkipSave(generation)) {
@@ -116,6 +117,10 @@ export class ReaderTracker {
           return;
         }
         if (parentItem) {
+          if (this.wasParentResetAfter(parentId, scheduledAt)) {
+            Logger.log(`save skipped: parent=${parentId} was reset after page change`);
+            return;
+          }
           const current = this.dataStore.getData(parentItem).p?.[attachmentId];
           const nextProgress = typeof current === 'number' ? Math.max(current, progress) : progress;
           if (nextProgress !== progress) {
@@ -150,6 +155,11 @@ export class ReaderTracker {
 
   private shouldSkipSave(generation: number): boolean {
     return !this.active || generation !== this.generation || this.isZoteroShuttingDown();
+  }
+
+  private wasParentResetAfter(parentId: number, timestamp: number): boolean {
+    const resetAt = this.dataStore.getResetTimestamp(parentId);
+    return typeof resetAt === 'number' && resetAt > timestamp;
   }
 
   private normalizeProgress(progress: number): number {

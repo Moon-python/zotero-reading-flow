@@ -2,10 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { ADDON_ID, UPDATE_URL } = require('./release-config');
 
 const DEFAULT_REPO_ROOT = path.resolve(__dirname, '..');
-const ADDON_ID = 'readingflow@moon.com';
-const UPDATE_URL = 'https://github.com/Moon-python/zotero-reading-flow/releases/latest/download/updates.json';
 
 const args = parseArgs(process.argv.slice(2));
 if (args.help) {
